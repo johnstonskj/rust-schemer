@@ -1,0 +1,21 @@
+[package]
+name = "schemer"
+version = "0.1.0"
+edition = "2018"
+
+[features]
+default = []
+big-numbers = ["bigdecimal"]
+char-names = ["unicode_names2"]
+
+[dependencies]
+num = "0.4"
+pest = "2.1"
+pest_derive = "2.1"
+rust_decimal = "1.15"
+
+bigdecimal = { version = "0.2", optional = true }
+unicode_names2 = { version = "0.4", optional = true }
+
+[dev-dependencies]
+pest_ascii_tree = "0.1"
