@@ -13,6 +13,8 @@
 Cargo.lock
 **/*.rs.bk
 
+**/schemer-history.txt
+
 ## ------------------------------------------------------------------------------------------------
 # Files required for CI integration (Travis)
 /ci

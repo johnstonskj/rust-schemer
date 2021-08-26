@@ -1,0 +1,742 @@
+//* 7. Formal syntax and semantics
+//*
+//* This chapter provides formal descriptions of what has al- ready been described informally in previous chapters of
+//* this report.
+
+//* 7.1. Formal syntax
+//*
+//* This section provides a formal syntax for Scheme written in an extended BNF.
+//*
+//* All spaces in the grammar are for legibility. Case is not significant except in the definitions of ⟨letter⟩,
+//* ⟨character name⟩ and ⟨mnemonic escape⟩; for example, #x1A and #X1a are equivalent, but foo and Foo and #\space and
+//* #\Space are distinct. ⟨empty⟩ stands for the empty string.
+//*
+//* The following extensions to BNF are used to make the description more concise: ⟨thing⟩* means zero or more
+//* occurrences of ⟨thing⟩; and ⟨thing⟩+ means at least one ⟨thing⟩.
+
+//* 7.1.1. Lexical structure
+//*
+//* This section describes how individual tokens (identifiers, numbers, etc.) are formed from sequences of characters.
+//* The following sections describe how expressions and pro-grams are formed from sequences of tokens.
+//*
+//* ⟨Intertoken space⟩ can occur on either side of any token, but not within a token.
+//*
+//* Identifiers that do not begin with a vertical line are terminated by a ⟨delimiter⟩ or by the end of the input. So
+//* are dot, numbers, characters, and booleans. Identifiers that begin with a vertical line are terminated by another
+//* vertical line.
+//*
+//* The following four characters from the ASCII repertoire are reserved for future extensions to the language: [ ] { }
+//*
+//* In addition to the identifier characters of the ASCII repertoire specified below, Scheme implementations may permit
+//* any additional repertoire of Unicode characters to be employed in identifiers, provided that each such character
+//* has a Unicode general category of Lu, Ll, Lt, Lm, Lo, Mn, Mc, Me, Nd, Nl, No, Pd, Pc, Po, Sc, Sm, Sk, So, or Co,
+//* or is U+200C or U+200D (the zero-width non-joiner and joiner, respectively, which are needed for correct spelling
+//* in Persian, Hindi, and other languages). However, it is an error for the first character to have a general category
+//* of Nd, Mc, or Me. It is also an error to use a non-Unicode character in symbols or identifiers.
+//*
+//* All Scheme implementations must permit the escape sequence \x<hexdigits>; to appear in Scheme identifiers that
+//* are enclosed in vertical lines. If the character with the given Unicode scalar value is supported by the
+//* implementation, identifiers containing such a sequence are equivalent to identifiers containing the corresponding
+//* character.
+
+// -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+
+tokens = {
+    SOI ~ token* ~ EOI
+}
+
+// -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+
+// ⟨token⟩ −→ ⟨identifier⟩ | ⟨boolean⟩ | ⟨number⟩ | ⟨character⟩ | ⟨string⟩
+//     | ( | ) | #( | #u8( | ’ | ` | , | ,@ | .
+
+token = {
+    boolean
+    | number
+    | identifier
+    | character
+    | string
+    | left_vec
+    | left_byte_vec
+    | left_paren
+    | right_paren
+    | apostrophe
+    | back_tick
+    | comma_at
+    | comma
+    | period
+}
+
+left_paren = @{ "(" }
+
+right_paren = @{ ")" }
+
+left_vec = @{ "#(" }
+
+left_byte_vec = @{ "#u8(" }
+
+apostrophe = @{ "'" }
+
+back_tick = @{ "`" }
+
+comma = @{ "," }
+
+comma_at = @{ ",@" }
+
+period = @{ "." }
+
+// ⟨delimiter⟩ −→ ⟨whitespace⟩ | ⟨vertical line⟩ |(|)|"|;
+
+delimiter = {
+    vertical_line | left_paren | right_paren | double_quote | semi_colon
+}
+
+double_quote = _{ "\"" }
+
+semi_colon = _{ ";" }
+
+// ⟨intraline whitespace⟩ −→ ⟨space or tab⟩
+
+intraline_whitespace = {
+    " " | "\t"
+}
+
+// ⟨whitespace⟩ −→ ⟨intraline whitespace⟩ | ⟨line ending⟩
+
+WHITESPACE = _{ intraline_whitespace | line_ending }
+
+// ⟨vertical line⟩ −→ |
+
+vertical_line = @{ "|" }
+
+// ⟨line ending⟩ −→ ⟨newline⟩ | ⟨return⟩ ⟨newline⟩
+//     | ⟨return⟩
+
+line_ending = {
+    NEWLINE
+}
+
+// ⟨comment⟩ −→ ; ⟨all subsequent characters up to a line ending⟩
+//     | ⟨nested comment⟩
+//     | #; ⟨intertoken space⟩ ⟨datum⟩
+
+COMMENT = _{
+    semi_colon ~ (!"\n" ~ ANY)*
+    | nested_comment
+//    | "#;" ~ intertoken_space ~ datum
+}
+
+// ⟨nested comment⟩ −→ #| ⟨comment text⟩ ⟨comment cont⟩* |#
+
+nested_comment = {
+    "#|" ~ (comment_text | nested_comment)* ~ "|#"
+}
+
+// ⟨comment text⟩ −→ ⟨character sequence not containing #| or |#⟩
+
+comment_text = {
+    !("#|" | "|#") ~ ANY
+}
+
+// ⟨comment cont⟩ −→ ⟨nested comment⟩ ⟨comment text⟩
+
+// comment_cont = NOT_USED
+
+// ⟨directive⟩ −→ #!fold-case | #!no-fold-case
+
+directive = {
+    "#!fold-case" | "#!no-fold-case"
+}
+
+//* Note that it is ungrammatical to follow a ⟨directive⟩ with anything but a ⟨delimiter⟩ or the end of file.
+
+// ⟨atmosphere⟩ −→ ⟨whitespace⟩ | ⟨comment⟩ | ⟨directive⟩
+
+// atmosphere = NOT_USED
+
+// ⟨intertoken space⟩ −→ ⟨atmosphere⟩*
+
+// intertoken_space = NOT_USED
+
+
+// -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+
+//* Note that +i, -i and ⟨infnan⟩ below are exceptions to the ⟨peculiar identifier⟩ rule; they are parsed as numbers,
+//* not identifiers.
+
+// ⟨identifier⟩ −→ ⟨initial⟩ ⟨subsequent⟩*
+//     | ⟨vertical line⟩ ⟨symbol element⟩* ⟨vertical line⟩
+//     | ⟨peculiar identifier⟩
+
+identifier = @{
+    initial ~ subsequent*
+    | vertical_line ~ symbol_element* ~ vertical_line
+    | peculiar_identifier
+}
+
+// ⟨initial⟩ −→ ⟨letter⟩ | ⟨special initial⟩
+
+initial = {
+    letter | special_initial
+}
+
+
+unicode_initial = {
+    LETTER | NONSPACING_MARK | LETTER_NUMBER | OTHER_NUMBER | CONNECTOR_PUNCTUATION | DASH_PUNCTUATION
+    | OTHER_PUNCTUATION | SYMBOL | PRIVATE_USE
+}
+
+// ⟨letter⟩ −→ a | b | c | ... | z | A | B | C | ... | Z
+
+letter = {
+    ASCII_ALPHA
+}
+
+// ⟨special initial⟩ −→ ! | $ | % | & | * | / | : | < | =
+//     |>|?|^|_|~
+
+special_initial = @{
+    "!" | "$" | "%" | "&" | "*" | "/" | ":" | "<" | "=" | ">" | "?" | "^" | "_" | "~"
+}
+
+// ⟨subsequent⟩ −→ ⟨initial⟩ | ⟨digit⟩
+//     | ⟨special subsequent⟩
+
+subsequent = {
+    initial | digit | special_subsequent
+}
+
+
+unicode_subsequent = {
+    LETTER | MARK | NUMBER | CONNECTOR_PUNCTUATION | DASH_PUNCTUATION | OTHER_PUNCTUATION | SYMBOL | PRIVATE_USE
+    | '\u{200C}'..'\u{200D}'
+}
+
+// ⟨digit⟩ −→ 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+
+digit = {
+    ASCII_DIGIT
+}
+
+// ⟨hex digit⟩ −→ ⟨digit⟩ | a | b | c | d | e | f
+
+hex_digit = {
+    ASCII_HEX_DIGIT
+}
+
+// ⟨explicit sign⟩ −→ + | -
+
+explicit_sign = {
+    "+" | "-"
+}
+
+// ⟨special subsequent⟩ −→ ⟨explicit sign⟩ | . | @
+
+special_subsequent = {
+    explicit_sign | "." | "@"
+}
+
+// ⟨inline hex escape⟩ −→ \x⟨hex scalar value⟩;
+
+inline_hex_escape = @{
+    "\\x" ~ hex_scalar_value ~ ";"
+}
+
+// ⟨hex scalar value⟩ −→ ⟨hex digit⟩+
+
+hex_scalar_value = {
+    hex_digit+
+}
+
+// ⟨mnemonic escape⟩ −→ \a | \b | \t | \n | \r
+
+mnemonic_escape = {
+    "\\" ~ ("\\" | "a" | "b" | "t" | "n" | "r")
+}
+
+// ⟨peculiar identifier⟩ −→ ⟨explicit sign⟩
+//     | ⟨explicit sign⟩ ⟨sign subsequent⟩ ⟨subsequent⟩*
+//     | ⟨explicit sign⟩ . ⟨dot subsequent⟩ ⟨subsequent⟩*
+//     | . ⟨dot subsequent⟩ ⟨subsequent⟩*
+
+peculiar_identifier = {
+    explicit_sign ~ (
+        sign_subsequent ~ subsequent*
+        | period ~ dot_subsequent ~ subsequent*
+    )?
+    | period ~ dot_subsequent ~ subsequent*
+}
+
+// ⟨dot subsequent⟩ −→ ⟨sign subsequent⟩ | .
+
+dot_subsequent = {
+    sign_subsequent | period
+}
+
+// ⟨sign subsequent⟩ −→ ⟨initial⟩ | ⟨explicit sign⟩ | @
+
+sign_subsequent = {
+    initial | explicit_sign | "@"
+}
+
+// ⟨symbol element⟩ −→
+//     ⟨any character other than ⟨vertical line⟩ or \⟩
+//     | ⟨inline hex escape⟩ | ⟨mnemonic escape⟩ | \|
+
+symbol_element = {
+    !(vertical_line | "\\") ~ ANY
+    | mnemonic_escape
+    | inline_hex_escape
+    | "\\|"
+}
+
+// ⟨boolean⟩ −→ #t | #f | #true | #false
+
+boolean = {
+    "#" ~ ("true" | "false" | "t" | "f")
+}
+
+// ⟨character⟩ −→ #\ ⟨any character⟩
+//     | #\ ⟨character name⟩
+//     | #\x⟨hex scalar value⟩
+
+character = @{
+    "#\\" ~ (
+        "x" ~ hex_scalar_value
+        | character_name
+        | ANY+ // <-- allows the use of Unicode character names.
+    )
+}
+
+// ⟨character name⟩ −→ alarm | backspace | delete
+//     | escape | newline | null | return | space | tab
+
+character_name = {
+    "alarm" | "backspace" | "delete" | "escape" | "newline" | "null" | "return" | "space" | "tab"
+}
+
+// ⟨string⟩ −→ " ⟨string element⟩* "
+
+string = @{
+    double_quote ~ string_element* ~ double_quote
+}
+
+// ⟨string element⟩ −→ ⟨any character other than " or \⟩
+//     | ⟨mnemonic escape⟩ | \" | \\
+//     | \⟨intraline whitespace⟩*⟨line ending⟩
+//       ⟨intraline whitespace⟩*
+//     | ⟨inline hex escape⟩
+
+string_element = {
+    !(double_quote | "\\") ~ ANY
+    | mnemonic_escape
+    | intraline_whitespace* ~ line_ending ~ intraline_whitespace*
+    | inline_hex_escape
+}
+
+// ⟨bytevector⟩ −→ #u8(⟨byte⟩*)
+
+byte_vector = {
+    left_byte_vec ~ byte* ~ right_paren
+}
+
+// ⟨byte⟩ −→ ⟨any exact integer between 0 and 255⟩
+
+byte = @{
+	'1'..'2' ~ ASCII_DIGIT ~ '0'..'5'
+	| "0"? ~ '1'..'9' ~ ASCII_DIGIT
+	| "0"? ~ "0"? ~ ASCII_DIGIT
+}
+
+// -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+
+// ⟨number⟩ −→ ⟨num 2⟩ | ⟨num 8⟩ | ⟨num 10⟩ | ⟨num 16⟩
+
+number = {
+	num_2 | num_8 | num_10 | num_16
+}
+
+//* The following rules for ⟨num R⟩, ⟨complex R⟩, ⟨real R⟩, ⟨ureal R⟩, ⟨uinteger R⟩, and ⟨prefix R⟩ are implicitly
+//* replicated for R = 2, 8, 10, and 16. There are no rules for ⟨decimal 2⟩, ⟨decimal 8⟩, and ⟨decimal 16⟩, which means
+//* that numbers containing decimal points or exponents are always in decimal radix. Although not shown below, all
+//* alphabetic characters used in the grammar of numbers can appear in either upper or lower case.
+
+// ⟨num R⟩ −→ ⟨prefix R⟩ ⟨complex R⟩
+
+num_2 = _{
+    prefix_2 ~ complex_2
+}
+
+num_8 = _{
+    prefix_8 ~ complex_8
+}
+
+num_10 = _{
+    prefix_10 ~ ( complex_10 | real_10)
+}
+
+num_16 = _{
+    prefix_16 ~ complex_16
+}
+
+// ⟨complex R⟩ −→ ⟨real R⟩
+//     | ⟨real R⟩ @ ⟨real R⟩
+//     | ⟨realR⟩ + ⟨urealR⟩ i
+//     | ⟨realR⟩ - ⟨urealR⟩ i
+//     | ⟨realR⟩ + i
+//     | ⟨realR⟩ - i
+//     | ⟨realR⟩ ⟨infnan⟩ i
+//     | + ⟨urealR⟩ i
+//     | - ⟨urealR⟩ i
+//     | ⟨infnan⟩ i
+//     | + i
+//     | - i
+
+i = @{ !"inf" ~ ^"i" }
+
+polar_sym = @{
+	"@"
+}
+
+complex_2 = _{
+    polar_2
+    | cartesian_2
+    | real_2
+}
+
+polar_2 = ${
+    real_2 ~ polar_sym ~ real_2
+}
+
+cartesian_2 = ${
+    real_2 ~ infnan ~ i
+    | real_2 ~ sign ~ real_2 ~ i
+    | real_2 ~ sign ~ i
+    | sign ~ ureal_2? ~ i
+}
+
+complex_8 = _{
+    polar_8
+    | cartesian_8
+    | real_8
+}
+
+polar_8 = ${
+    real_8 ~ polar_sym ~ real_8
+}
+
+cartesian_8 = ${
+    real_8 ~ infnan ~ i
+    | real_8 ~ sign ~ real_8 ~ i
+    | real_8 ~ sign ~ i
+    | sign ~ ureal_8? ~ i
+}
+
+complex_10 = _{
+    polar_10
+    | cartesian_10
+}
+
+polar_10 = ${
+	real_10 ~ polar_sym ~ real_10
+}
+
+cartesian_10 = ${
+	real_10 ~ infnan ~ i
+    | real_10 ~ sign ~ real_10 ~ i
+    | real_10 ~ sign ~ i
+    | sign ~ ureal_10? ~ i
+}
+
+complex_16 = _{
+    polar_16
+    | cartesian_16
+    | real_16
+}
+
+polar_16 = ${
+    real_16 ~ polar_sym ~ real_16
+}
+
+cartesian_16 = ${
+    real_16 ~ infnan ~ i
+    | real_16 ~ sign ~ real_16 ~ i
+    | real_16 ~ sign ~ i
+    | sign ~ ureal_16? ~ i
+}
+
+// ⟨real R⟩ −→ ⟨sign⟩ ⟨ureal R⟩
+//     | ⟨infnan⟩
+
+real_2 = _{
+    sign? ~ ureal_2
+    | infnan
+}
+
+real_8 = _{
+    sign? ~ ureal_8
+    | infnan
+}
+
+real_10 = _{
+    sign? ~ ureal_10
+    | infnan
+}
+
+real_16 = _{
+    sign? ~ ureal_16
+    | infnan
+}
+
+// ⟨ureal R⟩ −→ ⟨uinteger R⟩
+//     | ⟨uinteger R⟩ / ⟨uinteger R⟩
+//     | ⟨decimal R⟩
+
+fraction_slash = @{
+	"/"     // solidus (slash)
+	// The following are added as they are typographically correct
+    | "⁄"   // fraction slash
+    | "／"  // fullwidth solidus
+    | "∕"   // division slash
+}
+
+ureal_2 = _{
+    uratio_2 | uinteger_2
+}
+
+uratio_2 = ${
+	uinteger_2 ~  fraction_slash ~ uinteger_2
+}
+
+ureal_8 = _{
+    uratio_8 | uinteger_8
+}
+
+uratio_8 = ${
+    uinteger_8 ~ fraction_slash ~ uinteger_8
+}
+
+ureal_10 = _{
+    uratio_10
+    | decimal_10
+    | uinteger_10
+}
+
+uratio_10 = ${
+    uinteger_10 ~ fraction_slash ~ uinteger_10
+}
+
+ureal_16 = _{
+    uratio_16 | uinteger_16
+}
+
+uratio_16 = ${
+    uinteger_16 ~ fraction_slash ~ uinteger_16
+}
+
+// ⟨decimal 10⟩ −→ ⟨uinteger 10⟩ ⟨suffix⟩
+//     | . ⟨digit 10⟩+ ⟨suffix⟩
+//     | ⟨digit 10⟩+ . ⟨digit 10⟩* ⟨suffix⟩
+
+decimal_10 = ${
+	uinteger_10 ~ period ~ uinteger_10? ~ suffix?
+    | period ~ uinteger_10 ~ suffix?
+    | uinteger_10 ~ suffix
+}
+
+// ⟨uinteger R⟩ −→ ⟨digit R⟩+
+
+uinteger_2 = @{
+    digit_2+
+}
+
+uinteger_8 = @{
+    digit_8+
+}
+
+uinteger_10 = @{
+    digit_10+
+}
+
+uinteger_16 = @{
+    digit_16+
+}
+
+// ⟨prefix R⟩ −→ ⟨radix R⟩ ⟨exactness⟩
+//     | ⟨exactness⟩ ⟨radix R⟩
+
+prefix_2 = _{
+    radix_2 ~ exactness?
+    | exactness? ~ radix_2
+}
+
+prefix_8 = _{
+    radix_8 ~ exactness?
+    | exactness? ~ radix_8
+}
+
+prefix_10 = _{
+    radix_10 ~ exactness?
+    | exactness? ~ radix_10? // <-- radix always optional for base-10
+}
+
+prefix_16 = _{
+    radix_16 ~ exactness?
+    | exactness? ~ radix_16
+}
+
+//* Racket uses the suffix "f" for single-flonums, similar to the exponent_marker below.
+
+// ⟨infnan⟩ −→ +inf.0 | -inf.0 | +nan.0 | -nan.0
+
+infnan = @{
+    sign ~ (^"inf" | ^"nan") ~ period ~ "0"
+}
+
+// ⟨suffix⟩ −→ ⟨empty⟩
+//     | ⟨exponent marker⟩ ⟨sign⟩ ⟨digit 10⟩+
+
+suffix = {
+    exponent_marker ~ sign? ~ uinteger_10
+}
+
+//* In systems with inexact numbers of varying precisions it can be useful to specify the precision of a constant. For
+//* this purpose, implementations may accept numerical constants written with an exponent marker that indicates the
+//* desired precision of the inexact representation. If so, the letter s, f, d, or l, meaning short, single, double,
+//* or long precision, respectively, can be used in place of e. The default precision has at least as much precision
+//* as double, but implementations may allow this default to be set by the user.
+
+// ⟨exponent marker⟩ −→ e
+
+exponent_marker = _{
+    ^"e" // "s" | "f" | "d" | "l"
+}
+
+// ⟨sign⟩ −→ ⟨empty⟩ | + | -
+
+sign = {
+    "+" | "-"
+}
+
+// ⟨exactness⟩ −→ ⟨empty⟩ | #i | #e
+
+exactness = @{
+    ^"#i" | ^"#e"
+}
+
+// ⟨radix 2⟩ −→ #b
+
+radix_2 = @{
+    ^"#b"
+}
+
+// ⟨radix 8⟩ −→ #o
+
+radix_8 = @{
+    ^"#o"
+}
+
+// ⟨radix 10⟩ −→ ⟨empty⟩ | #d
+
+radix_10 = @{
+    ^"#d"
+}
+
+// ⟨radix 16⟩ −→ #x
+
+radix_16 = @{
+    ^"#x"
+}
+
+// ⟨digit 2⟩ −→ 0 | 1
+
+digit_2 = {
+    '0'..'1'
+}
+
+// ⟨digit 8⟩ −→ 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7
+
+digit_8 = {
+    '0'..'7'
+}
+
+// ⟨digit 10⟩ −→ ⟨digit⟩
+
+digit_10 = {
+    digit
+}
+
+// ⟨digit 16⟩ −→ ⟨digit 10⟩ | a | b | c | d | e | f
+
+digit_16 = {
+    digit_10 | 'a'..'f' | 'A'..'F'
+}
+
+// -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+
+//* 7.1.2. External representations
+//*
+//* ⟨Datum⟩ is what the read procedure (section 6.13.2) successfully parses. Note that any string that parses as an
+//* ⟨expression⟩ will also parse as a ⟨datum⟩.
+
+// ⟨datum⟩ −→ ⟨simple datum⟩ | ⟨compound datum⟩
+//     | ⟨label⟩ = ⟨datum⟩ | ⟨label⟩ #
+
+datum = {
+    simple_datum | compound_datum
+    | label ~ "=" ~ datum | label ~ "#"
+}
+
+// ⟨simple datum⟩ −→ ⟨boolean⟩ | ⟨number⟩
+//     | ⟨character⟩ | ⟨string⟩ | ⟨symbol⟩ | ⟨bytevector⟩
+
+simple_datum = _{
+    boolean | number | character | string | symbol | byte_vector
+}
+
+// ⟨symbol⟩ −→ ⟨identifier⟩
+
+symbol = {
+    identifier
+}
+
+// ⟨compound datum⟩ −→ ⟨list⟩ | ⟨vector⟩ | ⟨abbreviation⟩
+
+compound_datum = _{
+    list | pair | vector | abbreviation
+}
+
+// ⟨list⟩ −→ (⟨datum⟩*) | (⟨datum⟩+ . ⟨datum⟩)
+
+list = {
+    "(" ~ datum* ~ ")"
+}
+
+pair = {
+    "(" ~ datum+ ~ "." ~ datum ~ ")"
+}
+
+// ⟨abbreviation⟩ −→ ⟨abbrev prefix⟩ ⟨datum⟩
+
+abbreviation = {
+    abbrev_prefix ~ datum
+}
+
+// ⟨abbrev prefix⟩ −→ ’ | ` | , | ,@
+
+abbrev_prefix = {
+    "'" | "`" | "," | ",@"
+}
+// ⟨vector⟩ −→ #(⟨datum⟩*)
+
+vector = {
+    "#(" ~ datum* ~ ")"
+}
+
+// ⟨label⟩ −→ # ⟨uinteger 10⟩
+
+label = {
+    "#" ~ uinteger_10
+}
+
+// -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
