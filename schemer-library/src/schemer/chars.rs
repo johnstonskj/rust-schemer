@@ -11,7 +11,7 @@ use schemer_lang::error::{Error, ErrorKind};
 use schemer_lang::eval::environment::Exports;
 use schemer_lang::eval::{Environment, Expression, Procedure};
 use schemer_lang::types::chars::{char_to_name, TYPE_NAME_CHAR};
-use schemer_lang::types::{Boolean, Char, Identifier, Ref, SchemeString};
+use schemer_lang::types::{Boolean, Char, Identifier, Ref, SchemeString, SchemeValue};
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
@@ -47,7 +47,7 @@ pub fn char_name(arguments: &[Expression], _: &mut Ref<Environment>) -> Result<E
             e => {
                 return Err(Error::from(ErrorKind::UnexpectedType {
                     expected: TYPE_NAME_CHAR.to_string(),
-                    actual: e.type_name(),
+                    actual: Some(e.type_name().to_string()),
                 }))
             }
         },

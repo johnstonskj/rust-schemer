@@ -129,7 +129,7 @@ macro_rules! is_typed_a {
                 e => {
                     return Err(Error::from(ErrorKind::UnexpectedType {
                         expected: $type_name.to_string(),
-                        actual: e.type_name(),
+                        actual: Some(e.type_name().to_string()),
                     }))
                 }
             })))

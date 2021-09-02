@@ -114,6 +114,26 @@ impl SchemeRepr for Expression {
     }
 }
 
+impl SchemeValue for Expression {
+    fn type_name(&self) -> &'static str {
+        match self {
+            Expression::Identifier(v) => v.type_name(),
+            Expression::Boolean(v) => v.type_name(),
+            Expression::Number(v) => v.type_name(),
+            Expression::Vector(v) => v.type_name(),
+            Expression::Character(v) => v.type_name(),
+            Expression::String(v) => v.type_name(),
+            Expression::ByteVector(v) => v.type_name(),
+            Expression::Quotation(v) => v.type_name(),
+            Expression::Procedure(v) => v.type_name(),
+            Expression::Null => TYPE_NAME_LIST,
+            Expression::Unspecified => VALUE_NAME_UNSPECIFIED,
+            Expression::Environment(v) => v.type_name(),
+            Expression::Form(v) => v.type_name(),
+        }
+    }
+}
+
 impl Expression {
     pub fn is_false(&self) -> bool {
         if let Expression::Boolean(v) = self {
@@ -178,24 +198,6 @@ impl Expression {
     pub fn is_form(&self) -> bool {
         matches!(self, Self::Form(_))
     }
-
-    pub fn type_name(&self) -> Option<String> {
-        match self {
-            Expression::Identifier(v) => Some(String::from(v.type_name())),
-            Expression::Boolean(v) => Some(String::from(v.type_name())),
-            Expression::Number(v) => Some(String::from(v.type_name())),
-            Expression::Vector(v) => Some(String::from(v.type_name())),
-            Expression::Character(v) => Some(String::from(v.type_name())),
-            Expression::String(v) => Some(String::from(v.type_name())),
-            Expression::ByteVector(v) => Some(String::from(v.type_name())),
-            Expression::Quotation(_) => None,
-            Expression::Procedure(v) => Some(String::from(v.type_name())),
-            Expression::Null => Some(String::from(TYPE_NAME_LIST)),
-            Expression::Unspecified => None,
-            Expression::Environment(v) => Some(String::from(v.type_name())),
-            Expression::Form(v) => Some(String::from(v.type_name())),
-        }
-    }
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -218,7 +220,7 @@ fn call_or_form_from_list(
             } else if let Some(expr) = variable {
                 Error::from(ErrorKind::UnexpectedType {
                     expected: TYPE_NAME_SYMBOL.to_string(),
-                    actual: expr.type_name(),
+                    actual: Some(expr.type_name().to_string()),
                 })
                 .into()
             } else {

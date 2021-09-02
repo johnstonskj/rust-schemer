@@ -13,7 +13,7 @@ use schemer_lang::eval::environment::Exports;
 use schemer_lang::eval::forms::TYPE_NAME_FORM;
 use schemer_lang::eval::procedures::{TYPE_NAME_BUILTIN_PROCEDURE, TYPE_NAME_PROCEDURE};
 use schemer_lang::eval::{Environment, Expression, Procedure};
-use schemer_lang::types::{Identifier, Ref, SchemeRepr, SchemeString};
+use schemer_lang::types::{Identifier, Ref, SchemeRepr, SchemeString, SchemeValue};
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
@@ -66,7 +66,7 @@ fn help(argument: &[Expression], _: &mut Ref<Environment>) -> Result<Expression,
                     "(or {} {} {})",
                     TYPE_NAME_PROCEDURE, TYPE_NAME_BUILTIN_PROCEDURE, TYPE_NAME_FORM
                 ),
-                actual: expr.type_name(),
+                actual: Some(expr.type_name().to_string()),
             }));
         },
     )))
@@ -76,7 +76,7 @@ fn inspect(argument: &[Expression], _: &mut Ref<Environment>) -> Result<Expressi
     println!(
         "{} => {}",
         &argument[0].to_repr_string(),
-        &argument[0].type_name().unwrap_or("?".to_string())
+        &argument[0].type_name()
     );
     Ok(Expression::Boolean(true.into()))
 }

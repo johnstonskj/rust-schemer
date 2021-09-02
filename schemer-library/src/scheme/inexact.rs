@@ -11,7 +11,7 @@ use schemer_lang::error::{Error, ErrorKind};
 use schemer_lang::eval::environment::Exports;
 use schemer_lang::eval::{Environment, Expression, Procedure};
 use schemer_lang::types::numbers::TYPE_NAME_NUMBER;
-use schemer_lang::types::{Boolean, Identifier, Number, Ref};
+use schemer_lang::types::{Boolean, Identifier, Number, Ref, SchemeValue};
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
