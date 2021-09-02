@@ -1,13 +1,9 @@
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
-use schemer_lang::parameters::global_flags;
-use schemer_lang::read::datum::Datum;
-use schemer_lang::types::lists::list;
-use schemer_lang::types::{Boolean, Integer, Pair, SchemeRepr, SchemeString, Symbol};
+use schemer_lang::eval::eval_datum;
+use schemer_lang::types::{Ref, SchemeRepr};
 use schemer_lang::{IMPLEMENTATION_NAME, IMPLEMENTATION_VERSION};
-use schemer_library::scheme::base::features;
-use schemer_library::scheme::eval::eval_datum;
-use schemer_library::scheme::repl::interaction_environment;
+use schemer_library::{make_preset_environment, PresetEnvironmentKind};
 use schemer_parse::parser::parse_datum_str;
 use structopt::StructOpt;
 
@@ -26,7 +22,7 @@ fn main() {
             println!("No previous history.");
         }
 
-        let env = interaction_environment(5.into()).unwrap();
+        let mut env = make_preset_environment(PresetEnvironmentKind::Interaction).unwrap();
 
         loop {
             let result = rl.readline("> ");
@@ -36,10 +32,14 @@ fn main() {
                         rl.add_history_entry(line.as_str());
                         let result = parse_datum_str(&line);
                         match result {
-                            Ok(datum) => {
-                                let result = eval_datum(datum, &env).unwrap();
-                                println!("{}", result.to_repr_string());
-                            }
+                            Ok(datum) => match eval_datum(Ref::new(datum), &mut env) {
+                                Ok(result) => {
+                                    println!("{}", result.to_repr_string());
+                                }
+                                Err(err) => {
+                                    println!("{}", err);
+                                }
+                            },
                             Err(e) => {
                                 eprintln!("{}", e);
                             }
@@ -68,14 +68,6 @@ fn main() {
 // Commands
 // ------------------------------------------------------------------------------------------------
 
-fn show_settings(args: &CommandLine) -> bool {
-    println!();
-    println!("> (features)\n{}\n", features().to_repr_string());
-    println!("> (global-flags)\n{}\n", global_flags().to_repr_string());
-    println!("> (repl-flags)\n{}\n", repl_flags(args).to_repr_string());
-    false
-}
-
 // ------------------------------------------------------------------------------------------------
 // Command-Line
 // ------------------------------------------------------------------------------------------------
@@ -94,37 +86,28 @@ struct CommandLine {
     /// The name of the file for command history
     #[structopt(long, default_value = "schemer-history.txt")]
     history_file: String,
-
-    #[structopt(subcommand)]
-    cmd: Option<SubCommand>,
 }
 
-fn repl_flags(args: &CommandLine) -> Box<Pair> {
-    list(
-        vec![
-            ("verbose", Datum::from(Integer::from(args.verbose))),
-            ("use-color", Datum::from(Boolean::from(args.use_color))),
-            (
-                "history-file",
-                Datum::from(SchemeString::from(args.history_file.to_string())),
-            ),
-        ]
-        .into_iter()
-        .map(|(k, v)| {
-            Datum::List(Box::new(Pair::cons(
-                Datum::Symbol(Symbol::from_str_unchecked(k)),
-                v,
-            )))
-        })
-        .collect(),
-    )
-}
-
-#[derive(Debug, StructOpt)]
-enum SubCommand {
-    /// Display current settings and exit
-    Settings,
-}
+// fn repl_flags(args: &CommandLine) -> Pair {
+//     vector_to_list(
+//         vec![
+//             ("verbose", Datum::from(Integer::from(args.verbose))),
+//             ("use-color", Datum::from(Boolean::from(args.use_color))),
+//             (
+//                 "history-file",
+//                 Datum::from(SchemeString::from(args.history_file.to_string())),
+//             ),
+//         ]
+//         .into_iter()
+//         .map(|(k, v)| {
+//             Datum::List(Pair::cons(
+//                 Datum::Symbol(Identifier::from_str_unchecked(k)).into(),
+//                 v.into(),
+//             ))
+//         })
+//         .collect(),
+//     )
+// }
 
 // TODO: find config path, load "init.sc"
 // (
@@ -144,12 +127,17 @@ enum SubCommand {
 
 fn parse_command_line() -> String {
     let args = CommandLine::from_args();
-    if match args.cmd {
-        Some(SubCommand::Settings) => show_settings(&args),
-        _ => true,
-    } {
-        args.history_file
-    } else {
-        std::process::exit(0)
-    }
+
+    pretty_env_logger::formatted_builder()
+        .filter_level(match args.verbose {
+            0 => log::LevelFilter::Off,
+            1 => log::LevelFilter::Error,
+            2 => log::LevelFilter::Warn,
+            3 => log::LevelFilter::Info,
+            4 => log::LevelFilter::Debug,
+            _ => log::LevelFilter::Trace,
+        })
+        .init();
+
+    args.history_file
 }

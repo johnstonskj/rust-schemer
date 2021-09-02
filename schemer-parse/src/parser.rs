@@ -14,7 +14,7 @@ use pest::iterators::Pair;
 use pest::Parser;
 use schemer_lang::error::{Error, ErrorKind};
 use schemer_lang::parameters::{get_global_flag, DEBUG_SHOW_TOKEN_TREE};
-use schemer_lang::read::datum::Datum;
+use schemer_lang::read::datum::{Abbreviation, Datum};
 use schemer_lang::read::tokens::Token;
 use schemer_lang::types::numbers::conv::{
     exact_to_inexact, inexact_complex_to_exact_complex, integer_to_inexact_real,
@@ -22,8 +22,8 @@ use schemer_lang::types::numbers::conv::{
 };
 use schemer_lang::types::numbers::{TYPE_NAME_EXACT_REAL, TYPE_NAME_INTEGER};
 use schemer_lang::types::{
-    lists::list, ExactReal, Identifier, InexactComplex, InexactReal, InfNan, Integer, Number,
-    Pair as DatumPair, Rational, SchemeString, Symbol,
+    lists::vector_to_list, ExactReal, Identifier, InexactComplex, InexactReal, InfNan, Integer,
+    Number, Pair as DatumPair, Rational, Ref, SchemeString, Vector,
 };
 use std::convert::TryFrom;
 use std::fmt::Debug;
@@ -61,6 +61,22 @@ macro_rules! debug_token_tree {
                     .expect("Could not print debug token tree")
             );
         }
+    };
+}
+
+// TODO: report errors with span to make better messages
+macro_rules! unexpected_input {
+    ($input_pair:expr) => {
+        return Err(Error::from(ErrorKind::ParserState {
+            input: $input_pair.as_str().to_string(),
+            state: None,
+        }))
+    };
+    ($input_pair:expr, $state:expr) => {
+        return Err(Error::from(ErrorKind::ParserState {
+            input: $input_pair.as_str().to_string(),
+            state: Some($state),
+        }))
     };
 }
 
@@ -158,11 +174,11 @@ fn parse_tokens(input_pair: Pair<'_, Rule>) -> Result<Vec<Token>, Error> {
                 match inner_pair.as_rule() {
                     Rule::token => tokens.push(parse_token(inner_pair)?),
                     Rule::EOI => {}
-                    _ => panic!("Unexpected input: {}", inner_pair),
+                    _ => unexpected_input!(inner_pair),
                 }
             }
         }
-        _ => panic!("Unexpected input: {}", input_pair),
+        _ => unexpected_input!(input_pair),
     }
     Ok(tokens)
 }
@@ -178,10 +194,10 @@ fn parse_token(input_pair: Pair<'_, Rule>) -> Result<Token, Error> {
                     Rule::right_paren => Ok(Token::RightParen),
                     Rule::left_vec => Ok(Token::LeftVector),
                     Rule::left_byte_vec => Ok(Token::LeftByteVector),
-                    Rule::apostrophe => Ok(Token::Apostrophe),
-                    Rule::back_tick => Ok(Token::BackTick),
-                    Rule::comma => Ok(Token::Comma),
-                    Rule::comma_at => Ok(Token::CommaAt),
+                    Rule::apostrophe => Ok(Token::Quote),
+                    Rule::back_tick => Ok(Token::QuasiQuote),
+                    Rule::comma => Ok(Token::Unquote),
+                    Rule::comma_at => Ok(Token::UnquoteSplicing),
                     Rule::period => Ok(Token::Dot),
                     Rule::identifier => {
                         let identifier = Identifier::from_str_unchecked(inner_pair.as_str());
@@ -191,13 +207,13 @@ fn parse_token(input_pair: Pair<'_, Rule>) -> Result<Token, Error> {
                     Rule::number => Ok(parse_number(inner_pair)?.simplify().into()),
                     Rule::character => Ok(string_to_char(span)?.into()),
                     Rule::string => Ok(SchemeString::from_str(span)?.into()),
-                    _ => panic!("Unexpected input: {}", inner_pair),
+                    _ => unexpected_input!(inner_pair),
                 }
             } else {
-                panic!("Missing input: {}", inner_pairs)
+                unexpected_input!(inner_pairs)
             }
         }
-        _ => panic!("Unexpected input: {}", input_pair),
+        _ => unexpected_input!(input_pair),
     }
 }
 
@@ -239,7 +255,7 @@ fn parse_number(input_pair: Pair<'_, Rule>) -> Result<Number, Error> {
             Rule::decimal_10 => return Ok(parse_decimal_number(inner_pair, negative)?.into()),
             Rule::infnan => {
                 return if let Some(true) = exact {
-                    Err(ErrorKind::Value {
+                    Err(ErrorKind::ParseValue {
                         kind: "exact".to_string(),
                         value: inner_pair.as_str().to_string(),
                     }
@@ -265,7 +281,7 @@ fn parse_number(input_pair: Pair<'_, Rule>) -> Result<Number, Error> {
                 });
             }
             _ => {
-                panic!("Unexpected input: {}", inner_pair)
+                unexpected_input!(inner_pair)
             }
         }
     }
@@ -378,7 +394,7 @@ fn parse_cartesian_complex_number(
             (2 | 4, Rule::i) => {
                 negative = false;
             }
-            _ => panic!("Unexpected input: {} (state: {})", inner_pair, state),
+            _ => unexpected_input!(inner_pair, state),
         }
     }
 
@@ -413,7 +429,7 @@ fn parse_real_number(
         Rule::infnan => InfNan::from_str(input_pair.as_str())
             .map(|v| InexactReal::from(v))
             .map(Number::from),
-        _ => panic!("Unexpected input: {}", input_pair),
+        _ => unexpected_input!(input_pair),
     }
 }
 
@@ -451,7 +467,7 @@ fn parse_integer_number(
     .map_err(|e| {
         Error::chain(
             Box::new(e),
-            ErrorKind::Value {
+            ErrorKind::ParseValue {
                 kind: TYPE_NAME_INTEGER.to_string(),
                 value: input_pair.as_str().to_string(),
             },
@@ -481,7 +497,7 @@ fn parse_decimal_number(input_pair: Pair<'_, Rule>, negative: bool) -> Result<Ex
             (_, Rule::suffix) => {
                 exp = inner_pair.as_str().to_string();
             }
-            _ => panic!("Unexpected input: {} (state: {})", inner_pair, state),
+            _ => unexpected_input!(inner_pair, state),
         }
     }
 
@@ -494,7 +510,7 @@ fn parse_decimal_number(input_pair: Pair<'_, Rule>, negative: bool) -> Result<Ex
     .map_err(|e| {
         Error::chain(
             Box::new(e),
-            ErrorKind::Value {
+            ErrorKind::ParseValue {
                 kind: TYPE_NAME_EXACT_REAL.to_string(),
                 value: decimal_str,
             },
@@ -505,7 +521,7 @@ fn parse_decimal_number(input_pair: Pair<'_, Rule>, negative: bool) -> Result<Ex
 fn parse_datum(input_pair: Pair<'_, Rule>) -> Result<Datum, Error> {
     match input_pair.as_rule() {
         Rule::datum => parse_datum_inner(input_pair),
-        _ => panic!("Unexpected input: {}", input_pair),
+        _ => unexpected_input!(input_pair),
     }
 }
 
@@ -514,7 +530,7 @@ fn parse_datum_inner(input_pair: Pair<'_, Rule>) -> Result<Datum, Error> {
     let input_pair = inner_pairs.next().unwrap();
     let datum: Datum = match input_pair.as_rule() {
         Rule::symbol => {
-            let symbol = Symbol::from_str_unchecked(input_pair.as_str());
+            let symbol = Identifier::from_str_unchecked(input_pair.as_str());
             symbol.into()
         }
         Rule::boolean => string_to_boolean(input_pair.as_str())?.into(),
@@ -525,7 +541,7 @@ fn parse_datum_inner(input_pair: Pair<'_, Rule>) -> Result<Datum, Error> {
         Rule::list => parse_list(input_pair)?.into(),
         Rule::vector => parse_vector(input_pair)?.into(),
         Rule::abbreviation => parse_abbreviation(input_pair)?.into(),
-        _ => panic!("Unexpected input: {}", input_pair),
+        _ => unexpected_input!(input_pair),
     };
     assert!(inner_pairs.next().is_none());
     Ok(datum)
@@ -536,10 +552,10 @@ fn parse_list(input_pair: Pair<'_, Rule>) -> Result<Datum, Error> {
     for inner_pair in input_pair.into_inner() {
         match inner_pair.as_rule() {
             Rule::datum => list_data.push(parse_datum_inner(inner_pair)?),
-            _ => panic!("Unexpected input: {}", inner_pair),
+            _ => unexpected_input!(inner_pair),
         }
     }
-    Ok(Datum::List(list(list_data)))
+    Ok(Datum::List(vector_to_list(Vector::from(list_data))))
 }
 
 fn parse_pair(input_pair: Pair<'_, Rule>) -> Result<DatumPair, Error> {
@@ -548,35 +564,43 @@ fn parse_pair(input_pair: Pair<'_, Rule>) -> Result<DatumPair, Error> {
     let car = if next_pair.as_rule() == Rule::datum {
         parse_datum_inner(next_pair)?
     } else {
-        panic!("Unexpected input: {}", next_pair);
+        unexpected_input!(next_pair);
     };
 
     let next_pair = inner_pairs.next().unwrap();
     let cdr = if next_pair.as_rule() == Rule::datum {
         parse_datum_inner(next_pair)?
     } else {
-        panic!("Unexpected input: {}", next_pair);
+        unexpected_input!(next_pair);
     };
 
-    Ok(DatumPair::cons(car, cdr))
+    Ok(DatumPair::cons(car.into(), cdr.into()))
 }
 
 fn parse_vector(input_pair: Pair<'_, Rule>) -> Result<Datum, Error> {
-    let mut vector = Vec::default();
+    let mut vector: Vec<Ref<Datum>> = Vec::default();
     for inner_pair in input_pair.into_inner() {
         match inner_pair.as_rule() {
-            Rule::datum => vector.push(parse_datum_inner(inner_pair)?.into()),
-            _ => panic!("Unexpected input: {}", inner_pair),
+            Rule::datum => vector.push(Ref::new(parse_datum_inner(inner_pair)?.into())),
+            _ => unexpected_input!(inner_pair),
         }
     }
-    Ok(Datum::Vector(vector))
+    Ok(Datum::Vector(Vector::from(vector)))
 }
 
 fn parse_abbreviation(input_pair: Pair<'_, Rule>) -> Result<Datum, Error> {
-    match input_pair.as_rule() {
-        Rule::datum => parse_datum_inner(input_pair),
-        _ => panic!("Unexpected input: {}", input_pair),
-    }
+    let mut inner_pairs = input_pair.into_inner();
+    let input_pair = inner_pairs.next().unwrap();
+    let abbreviation = match input_pair.as_rule() {
+        Rule::abbrev_prefix => Abbreviation::from_str(input_pair.as_str())?,
+        _ => unexpected_input!(input_pair),
+    };
+    let input_pair = inner_pairs.next().unwrap();
+    let datum = match input_pair.as_rule() {
+        Rule::datum => parse_datum_inner(input_pair)?,
+        _ => unexpected_input!(input_pair),
+    };
+    Ok(Datum::Abbreviation(abbreviation, Ref::new(datum)))
 }
 
 // ------------------------------------------------------------------------------------------------

@@ -7,8 +7,8 @@ More detailed description, with
 
 */
 
-use crate::scheme::eval::Environment;
 use schemer_lang::error::Error;
+use schemer_lang::eval::Environment;
 use schemer_lang::types::SchemeString;
 
 // ------------------------------------------------------------------------------------------------

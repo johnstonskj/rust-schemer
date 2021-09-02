@@ -10,9 +10,6 @@ More detailed description, with
 #[macro_use]
 extern crate lazy_static;
 
-#[macro_use]
-extern crate paste;
-
 // ------------------------------------------------------------------------------------------------
 // Public Types
 // ------------------------------------------------------------------------------------------------
@@ -45,10 +42,8 @@ pub mod error;
 
 pub mod read;
 
-pub mod semantics;
+pub mod eval;
 
 pub mod parameters;
 
 pub mod types;
-
-pub mod write;

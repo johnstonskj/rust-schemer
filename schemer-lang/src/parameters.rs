@@ -8,8 +8,8 @@ More detailed description, with
 */
 
 use crate::read::datum::Datum;
-use crate::types::lists::list;
-use crate::types::{Boolean, Pair, Symbol};
+use crate::types::lists::vec_to_list;
+use crate::types::{Boolean, Identifier, Pair};
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::sync::RwLock;
@@ -44,15 +44,15 @@ pub fn get_global_flag(s: &str) -> Option<bool> {
     }
 }
 
-pub fn global_flags() -> Box<Pair> {
-    list(
+pub fn global_flags() -> Pair {
+    vec_to_list(
         GLOBAL_FLAGS
             .keys()
             .map(|k| {
-                Datum::List(Box::new(Pair::cons(
-                    Datum::Symbol(Symbol::from_str_unchecked(k)),
-                    Datum::Boolean(Boolean::from(get_global_flag(k).unwrap_or_default())),
-                )))
+                Datum::List(Pair::cons(
+                    Datum::Symbol(Identifier::from_str_unchecked(k)).into(),
+                    Datum::Boolean(Boolean::from(get_global_flag(k).unwrap_or_default())).into(),
+                ))
             })
             .collect(),
     )

@@ -21,12 +21,15 @@ More detailed description, with
 
 */
 
-use rust_decimal::Decimal;
-
+use crate::read::syntax_str::{
+    EMPTY_STR, SYNTAX_MATH_COMPLEX_CHAR, SYNTAX_MATH_MINUS, SYNTAX_MATH_MINUS_CHAR,
+    SYNTAX_MATH_PLUS, SYNTAX_MATH_PLUS_CHAR,
+};
 use crate::types::{SchemeRepr, SchemeValue};
 use num::complex::Complex;
 use num::rational::Ratio;
 use num::traits::{Num, Signed, ToPrimitive, Zero};
+use rust_decimal::Decimal;
 use std::fmt::Display;
 use std::str::FromStr;
 
@@ -57,6 +60,8 @@ pub type InexactReal = f64;
 pub type ExactComplex = Complex<ExactReal>;
 
 pub type InexactComplex = Complex<InexactReal>;
+
+pub const TYPE_NAME_NUMBER: &str = "number";
 
 pub const TYPE_NAME_INTEGER: &str = "integer";
 pub const TYPE_NAME_RATIONAL: &str = "rational";
@@ -180,19 +185,28 @@ impl SchemeRepr for InexactReal {
 impl SchemeRepr for ExactComplex {
     fn to_repr_string(&self) -> String {
         format!(
-            "{}{}{}{}i",
-            if self.re.is_sign_negative() { "-" } else { "" },
+            "{}{}{}{}{}",
+            if self.re.is_sign_negative() {
+                SYNTAX_MATH_MINUS
+            } else {
+                EMPTY_STR
+            },
             if self.re.is_sign_negative() || !self.re.is_zero() {
                 self.re.to_repr_string()
             } else {
                 String::new()
             },
-            if self.im.is_sign_negative() { "-" } else { "+" },
+            if self.im.is_sign_negative() {
+                SYNTAX_MATH_MINUS_CHAR
+            } else {
+                SYNTAX_MATH_PLUS_CHAR
+            },
             if !self.im.is_zero() {
                 self.im.to_repr_string()
             } else {
                 String::new()
-            }
+            },
+            SYNTAX_MATH_COMPLEX_CHAR
         )
     }
 }
@@ -200,22 +214,23 @@ impl SchemeRepr for ExactComplex {
 impl SchemeRepr for InexactComplex {
     fn to_repr_string(&self) -> String {
         format!(
-            "{}{}{}i",
+            "{}{}{}{}",
             if self.re.is_sign_negative() || !self.re.is_zero() {
                 self.re.to_repr_string()
             } else {
                 String::new()
             },
             if self.im.is_sign_positive() && !self.im.is_infinite() && !self.im.is_nan() {
-                "+"
+                SYNTAX_MATH_PLUS
             } else {
-                ""
+                EMPTY_STR
             },
             if !self.im.is_zero() {
                 self.im.to_repr_string()
             } else {
                 String::new()
-            }
+            },
+            SYNTAX_MATH_COMPLEX_CHAR
         )
     }
 }
@@ -292,6 +307,25 @@ impl Number {
             Number::InexactReal(v) => Some(v.is_sign_negative()),
             Number::Rational(v) => Some(v.is_negative()),
             Number::Integer(v) => Some(v.is_negative()),
+        }
+    }
+
+    pub fn is_odd(&self) -> bool {
+        !self.is_even()
+    }
+
+    pub fn is_even(&self) -> bool {
+        match self {
+            Number::ExactComplex(v) => {
+                v % ExactComplex::from(ExactReal::from(2)) == ExactComplex::zero()
+            }
+            Number::InexactComplex(v) => {
+                v % InexactComplex::from(InexactReal::from(2)) == InexactComplex::zero()
+            }
+            Number::ExactReal(v) => v % ExactReal::from(2) == ExactReal::zero(),
+            Number::InexactReal(v) => v % InexactReal::from(2) == InexactReal::zero(),
+            Number::Rational(v) => v % Rational::from(2) == Rational::zero(),
+            Number::Integer(v) => v % Integer::from(2) == Integer::zero(),
         }
     }
 

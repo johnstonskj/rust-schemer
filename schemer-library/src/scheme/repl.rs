@@ -7,10 +7,11 @@ More detailed description, with
 
 */
 
-use crate::scheme::eval::Environment;
-use crate::scheme::r5rs::scheme_report_environment;
+use crate::{make_preset_environment, PresetEnvironmentKind};
 use schemer_lang::error::Error;
-use schemer_lang::types::numbers::Number;
+use schemer_lang::eval::environment::Exports;
+use schemer_lang::eval::{Environment, Expression, Procedure};
+use schemer_lang::types::{Identifier, Ref};
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
@@ -24,8 +25,12 @@ use schemer_lang::types::numbers::Number;
 // Public Functions
 // ------------------------------------------------------------------------------------------------
 
-pub fn interaction_environment(version: Number) -> Result<Environment, Error> {
-    scheme_report_environment(version)
+pub fn scheme_repl_exports() -> Exports {
+    let mut exports = Exports::default();
+
+    export_builtin!(exports, "interaction-environment" => interaction_environment);
+
+    exports
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -35,6 +40,15 @@ pub fn interaction_environment(version: Number) -> Result<Environment, Error> {
 // ------------------------------------------------------------------------------------------------
 // Private Functions
 // ------------------------------------------------------------------------------------------------
+
+fn interaction_environment(
+    _: &[Expression],
+    _: &mut Ref<Environment>,
+) -> Result<Expression, Error> {
+    Ok(Expression::Environment(make_preset_environment(
+        PresetEnvironmentKind::Interaction,
+    )?))
+}
 
 // ------------------------------------------------------------------------------------------------
 // Modules

@@ -15,3 +15,6 @@ rust_decimal = "1.15"
 unique_id = "0.1"
 
 unicode_names2 = { version = "0.4", optional = true }
+
+[dev-dependencies]
+pretty_assertions = "0.6"

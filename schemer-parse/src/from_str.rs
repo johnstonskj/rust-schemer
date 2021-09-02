@@ -10,11 +10,12 @@ More detailed description, with
 use crate::parser::parse_number_str;
 use schemer_lang::error::{Error, ErrorKind};
 use schemer_lang::read::syntax_str::{
-    BOOLEAN_FALSE, BOOLEAN_FALSE_SHORT, BOOLEAN_TRUE, BOOLEAN_TRUE_SHORT, SYNTAX_CHAR_PREFIX,
+    SYNTAX_CHAR_PREFIX, SYNTAX_HEX_CHAR_PREFIX, VALUE_BOOLEAN_FALSE, VALUE_BOOLEAN_FALSE_SHORT,
+    VALUE_BOOLEAN_TRUE, VALUE_BOOLEAN_TRUE_SHORT,
 };
 use schemer_lang::types::booleans::TYPE_NAME_BOOLEAN;
 use schemer_lang::types::chars::{name_to_char, TYPE_NAME_CHAR};
-use schemer_lang::types::{Boolean, Char, Number, Symbol};
+use schemer_lang::types::{Boolean, Char, Identifier, Number};
 use std::convert::TryFrom;
 
 // ------------------------------------------------------------------------------------------------
@@ -30,12 +31,12 @@ use std::convert::TryFrom;
 // ------------------------------------------------------------------------------------------------
 
 pub fn string_to_boolean(s: &str) -> Result<Boolean, Error> {
-    if s == BOOLEAN_TRUE || s == BOOLEAN_TRUE_SHORT {
+    if s == VALUE_BOOLEAN_TRUE || s == VALUE_BOOLEAN_TRUE_SHORT {
         Ok(Boolean::from(true))
-    } else if s == BOOLEAN_FALSE || s == BOOLEAN_FALSE_SHORT {
+    } else if s == VALUE_BOOLEAN_FALSE || s == VALUE_BOOLEAN_FALSE_SHORT {
         Ok(Boolean::from(false))
     } else {
-        Err(ErrorKind::Value {
+        Err(ErrorKind::ParseValue {
             kind: TYPE_NAME_BOOLEAN.to_string(),
             value: s.to_string(),
         }
@@ -44,12 +45,13 @@ pub fn string_to_boolean(s: &str) -> Result<Boolean, Error> {
 }
 
 pub fn string_to_char(s: &str) -> Result<Char, Error> {
-    if s.starts_with(SYNTAX_CHAR_PREFIX) {
+    let char_length = s.chars().count();
+    if s.starts_with(SYNTAX_HEX_CHAR_PREFIX) {
         u32::from_str_radix(&s[3..], 16)
             .map_err(|e| {
                 Error::chain(
                     Box::new(e),
-                    ErrorKind::Value {
+                    ErrorKind::ParseValue {
                         kind: TYPE_NAME_CHAR.to_string(),
                         value: s.to_string(),
                     }
@@ -57,7 +59,7 @@ pub fn string_to_char(s: &str) -> Result<Char, Error> {
                 )
             })
             .and_then(|cv| Char::try_from(cv))
-    } else if s.len() == 3 {
+    } else if s.starts_with(SYNTAX_CHAR_PREFIX) && char_length == 3 {
         let cs = &s[2..];
         let c = cs.chars().next().unwrap();
         Ok(c.into())
@@ -65,7 +67,7 @@ pub fn string_to_char(s: &str) -> Result<Char, Error> {
         if let Some(c) = name_to_char(s) {
             Ok(c.into())
         } else {
-            Err(ErrorKind::Value {
+            Err(ErrorKind::ParseValue {
                 kind: TYPE_NAME_CHAR.to_string(),
                 value: s.to_string(),
             }
@@ -82,11 +84,11 @@ pub fn string_to_number(s: &str) -> Result<Number, Error> {
     parse_number_str(s)
 }
 
-pub fn string_to_symbol(_s: &str) -> Result<Symbol, Error> {
+pub fn string_to_symbol(_s: &str) -> Result<Identifier, Error> {
     todo!()
 }
 
-pub fn string_to_list(_s: &str) -> Result<Symbol, Error> {
+pub fn string_to_list(_s: &str) -> Result<Identifier, Error> {
     todo!()
 }
 

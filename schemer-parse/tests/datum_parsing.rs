@@ -204,12 +204,20 @@ fn test_boolean_long() {
 fn test_char_single() {
     assert_parsed_ok("#\\A");
     assert_parsed_ok("#\\!");
+    assert_parsed_ok("#\\§");
+    assert_parsed_ok("#\\ༀ");
+    assert_parsed_ok("#\\😡");
 }
 
 #[test]
 fn test_char_spec_name() {
     assert_parsed_ok("#\\space");
     assert_parsed_ok("#\\alarm");
+}
+
+#[test]
+fn test_char_parsing_bug() {
+    assert_parsed_ok("(char? #\\a)");
 }
 
 #[test]

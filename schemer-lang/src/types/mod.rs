@@ -8,6 +8,7 @@ More detailed description, with
 */
 
 use std::fmt::Debug;
+use std::sync::Arc;
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
@@ -20,6 +21,8 @@ pub trait SchemeRepr {
 pub trait SchemeValue: Debug + SchemeRepr {
     fn type_name(&self) -> &'static str;
 }
+
+pub type Ref<T> = Arc<T>;
 
 // ------------------------------------------------------------------------------------------------
 // Private Macros
@@ -62,8 +65,6 @@ pub use booleans::Boolean;
 pub mod chars;
 pub use chars::Char;
 
-pub mod exceptions;
-
 pub mod lists;
 pub use lists::Pair;
 
@@ -73,9 +74,12 @@ pub use numbers::{
 };
 
 pub mod strings;
-pub use strings::SchemeString;
+pub use strings::{ByteVector, SchemeString};
 
 pub mod new_type;
 
 pub mod symbols;
-pub use symbols::{Identifier, Symbol};
+pub use symbols::Identifier;
+
+pub mod vector;
+pub use vector::Vector;

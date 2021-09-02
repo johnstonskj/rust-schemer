@@ -39,6 +39,8 @@ pub mod case_lambda;
 
 pub mod chars;
 
+pub mod char_folding;
+
 pub mod complex;
 
 pub mod cxr;

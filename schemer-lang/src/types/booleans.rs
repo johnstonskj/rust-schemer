@@ -9,10 +9,11 @@ More detailed description, with
 
 use crate::parameters::{get_global_flag, WRITE_BOOLEAN_LONG_FORM};
 use crate::read::syntax_str::{
-    BOOLEAN_FALSE, BOOLEAN_FALSE_SHORT, BOOLEAN_TRUE, BOOLEAN_TRUE_SHORT,
+    VALUE_BOOLEAN_FALSE, VALUE_BOOLEAN_FALSE_SHORT, VALUE_BOOLEAN_TRUE, VALUE_BOOLEAN_TRUE_SHORT,
 };
 use crate::types::new_type::NewType;
 use crate::types::{SchemeRepr, SchemeValue};
+use std::ops::Deref;
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
@@ -36,15 +37,15 @@ impl SchemeRepr for Boolean {
     fn to_repr_string(&self) -> String {
         if **self {
             if get_global_flag(WRITE_BOOLEAN_LONG_FORM).unwrap_or_default() {
-                BOOLEAN_TRUE
+                VALUE_BOOLEAN_TRUE
             } else {
-                BOOLEAN_TRUE_SHORT
+                VALUE_BOOLEAN_TRUE_SHORT
             }
         } else {
             if get_global_flag(WRITE_BOOLEAN_LONG_FORM).unwrap_or_default() {
-                BOOLEAN_FALSE
+                VALUE_BOOLEAN_FALSE
             } else {
-                BOOLEAN_FALSE_SHORT
+                VALUE_BOOLEAN_FALSE_SHORT
             }
         }
         .to_string()
@@ -53,6 +54,14 @@ impl SchemeRepr for Boolean {
 
 scheme_value!(Boolean, TYPE_NAME_BOOLEAN, "boolean");
 
+impl Boolean {
+    pub fn is_true(&self) -> bool {
+        *self.deref() == true
+    }
+    pub fn is_false(&self) -> bool {
+        *self.deref() == false
+    }
+}
 // ------------------------------------------------------------------------------------------------
 // Private Functions
 // ------------------------------------------------------------------------------------------------

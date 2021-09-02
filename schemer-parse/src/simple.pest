@@ -304,7 +304,8 @@ character = @{
     "#\\" ~ (
         "x" ~ hex_scalar_value
         | character_name
-        | ANY+ // <-- allows the use of Unicode character names.
+        | unicode_character_name
+        | ANY
     )
 }
 
@@ -313,6 +314,10 @@ character = @{
 
 character_name = {
     "alarm" | "backspace" | "delete" | "escape" | "newline" | "null" | "return" | "space" | "tab"
+}
+
+unicode_character_name = @{
+    ASCII_ALPHA ~ ( ASCII_ALPHANUMERIC | "_" )+
 }
 
 // ⟨string⟩ −→ " ⟨string element⟩* "

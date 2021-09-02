@@ -7,16 +7,14 @@ More detailed description, with
 
 */
 
-use crate::{ImportSet, Library};
 use schemer_lang::error::Error;
-use schemer_lang::read::datum::Datum;
-use schemer_lang::semantics::{datum_to_expression, Expression};
+use schemer_lang::eval::environment::Exports;
+use schemer_lang::eval::{Environment, Expression, Procedure};
+use schemer_lang::types::{Identifier, Ref};
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
 // ------------------------------------------------------------------------------------------------
-
-pub struct Environment {}
 
 // ------------------------------------------------------------------------------------------------
 // Private Types
@@ -26,24 +24,25 @@ pub struct Environment {}
 // Public Functions
 // ------------------------------------------------------------------------------------------------
 
-pub fn environment(_import_sets: &[ImportSet]) -> Result<Environment, Error> {
-    Ok(Environment {})
+pub fn scheme_eval_exports() -> Exports {
+    let mut exports = Exports::default();
+
+    export_builtin!(exports, "eval" => eval "expr-or-def" "environment-specifier");
+    export_builtin!(exports, "environment" => environment "import-set-1" ; "import-set-n");
+
+    exports
 }
 
-pub fn eval(expr: Expression, _environment: &Environment) -> Result<Expression, Error> {
-    Ok(expr)
+pub fn environment(_args: &[Expression], _: &mut Ref<Environment>) -> Result<Expression, Error> {
+    todo!()
 }
 
-pub fn eval_datum(datum: Datum, _environment: &Environment) -> Result<Expression, Error> {
-    eval(datum_to_expression(datum)?, _environment)
+pub fn eval(args: &[Expression], _: &mut Ref<Environment>) -> Result<Expression, Error> {
+    Ok(args[0].clone())
 }
 
 // ------------------------------------------------------------------------------------------------
 // Implementations
-// ------------------------------------------------------------------------------------------------
-
-// ------------------------------------------------------------------------------------------------
-// Private Functions
 // ------------------------------------------------------------------------------------------------
 
 // ------------------------------------------------------------------------------------------------

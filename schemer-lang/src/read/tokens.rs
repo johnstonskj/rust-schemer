@@ -7,6 +7,11 @@ More detailed description, with
 
 */
 
+use crate::read::syntax_str::{
+    SYNTAX_ABBR_QUASI_QUOTE, SYNTAX_ABBR_QUOTE, SYNTAX_ABBR_UNQUOTE, SYNTAX_ABBR_UNQUOTE_SPLICING,
+    SYNTAX_BYTE_VECTOR_PREFIX, SYNTAX_COMMENT_END, SYNTAX_COMMENT_START, SYNTAX_LEFT_PARENTHESIS,
+    SYNTAX_PERIOD, SYNTAX_RIGHT_PARENTHESIS, SYNTAX_VECTOR_PREFIX,
+};
 use crate::types::{Boolean, Char, Identifier, Number, SchemeRepr, SchemeString};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
@@ -35,10 +40,10 @@ pub enum Token {
     RightParen,
     LeftVector,
     LeftByteVector,
-    Apostrophe,
-    BackTick,
-    Comma,
-    CommaAt,
+    Quote,
+    QuasiQuote,
+    Unquote,
+    UnquoteSplicing,
     Dot,
 }
 
@@ -59,7 +64,8 @@ pub type Tokens = Vec<Token>;
 impl SchemeRepr for Comment {
     fn to_repr_string(&self) -> String {
         format!(
-            "#| {} |#",
+            "{} {} {}",
+            SYNTAX_COMMENT_START,
             self.0
                 .iter()
                 .map(|c| match c {
@@ -67,7 +73,8 @@ impl SchemeRepr for Comment {
                     CommentInner::Nested(v) => v.to_repr_string(),
                 })
                 .collect::<Vec<String>>()
-                .join(" ")
+                .join(" "),
+            SYNTAX_COMMENT_END,
         )
     }
 }
@@ -123,15 +130,16 @@ impl Display for Token {
                 Token::Number(v) => v.to_repr_string(),
                 Token::Character(v) => v.to_repr_string(),
                 Token::String(v) => v.to_string(),
-                Token::LeftParen => "(".to_string(),
-                Token::RightParen => "(".to_string(),
-                Token::LeftVector => "#(".to_string(),
-                Token::LeftByteVector => "#u8(".to_string(),
-                Token::Apostrophe => "'".to_string(),
-                Token::BackTick => "`".to_string(),
-                Token::Comma => ",".to_string(),
-                Token::CommaAt => ",@".to_string(),
-                Token::Dot => ".".to_string(),
+                Token::LeftParen => SYNTAX_LEFT_PARENTHESIS.to_string(),
+                Token::RightParen => SYNTAX_RIGHT_PARENTHESIS.to_string(),
+                Token::LeftVector => format!("{}{}", SYNTAX_VECTOR_PREFIX, SYNTAX_LEFT_PARENTHESIS),
+                Token::LeftByteVector =>
+                    format!("{}{}", SYNTAX_BYTE_VECTOR_PREFIX, SYNTAX_LEFT_PARENTHESIS),
+                Token::Quote => SYNTAX_ABBR_QUOTE.to_string(),
+                Token::QuasiQuote => SYNTAX_ABBR_QUASI_QUOTE.to_string(),
+                Token::Unquote => SYNTAX_ABBR_UNQUOTE.to_string(),
+                Token::UnquoteSplicing => SYNTAX_ABBR_UNQUOTE_SPLICING.to_string(),
+                Token::Dot => SYNTAX_PERIOD.to_string(),
             }
         )
     }

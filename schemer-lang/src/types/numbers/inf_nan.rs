@@ -7,12 +7,18 @@ More detailed description, with
 
 */
 
-use crate::error::{Error, ErrorKind};
-use crate::types::numbers::{InexactReal, TYPE_NAME_INEXACT_REAL};
-use num::Float;
 use std::convert::TryFrom;
 use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
+
+use num::Float;
+
+use crate::error::{Error, ErrorKind};
+use crate::read::syntax_str::{
+    VALUE_MATH_INFINITY_NEGATIVE, VALUE_MATH_INFINITY_POSITIVE, VALUE_MATH_NAN_NEGATIVE,
+    VALUE_MATH_NAN_POSITIVE,
+};
+use crate::types::numbers::{InexactReal, TYPE_NAME_INEXACT_REAL};
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
@@ -27,11 +33,6 @@ pub enum InfNan {
 }
 
 const TYPE_NAME_INF_NAN: &str = "inf-nan";
-
-const NUMERIC_INFINITY_NEGATIVE: &str = "-inf.0";
-const NUMERIC_INFINITY_POSITIVE: &str = "+inf.0";
-const NUMERIC_NAN_NEGATIVE: &str = "-nan.0";
-const NUMERIC_NAN_POSITIVE: &str = "+nan.0";
 
 // ------------------------------------------------------------------------------------------------
 // Private Types
@@ -84,16 +85,16 @@ impl FromStr for InfNan {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s == NUMERIC_INFINITY_POSITIVE {
+        if s == VALUE_MATH_INFINITY_POSITIVE {
             Ok(InfNan::PositiveInfinity)
-        } else if s == NUMERIC_INFINITY_NEGATIVE {
+        } else if s == VALUE_MATH_INFINITY_NEGATIVE {
             Ok(InfNan::NegativeInfinity)
-        } else if s == NUMERIC_NAN_POSITIVE {
+        } else if s == VALUE_MATH_NAN_POSITIVE {
             Ok(InfNan::PositiveNan)
-        } else if s == NUMERIC_NAN_NEGATIVE {
+        } else if s == VALUE_MATH_NAN_NEGATIVE {
             Ok(InfNan::NegativeNan)
         } else {
-            Err(ErrorKind::Value {
+            Err(ErrorKind::ParseValue {
                 kind: TYPE_NAME_INF_NAN.to_string(),
                 value: s.to_string(),
             }
@@ -105,10 +106,10 @@ impl FromStr for InfNan {
 impl InfNan {
     pub fn as_str(&self) -> &'static str {
         match self {
-            InfNan::PositiveInfinity => NUMERIC_INFINITY_POSITIVE,
-            InfNan::NegativeInfinity => NUMERIC_INFINITY_NEGATIVE,
-            InfNan::PositiveNan => NUMERIC_NAN_POSITIVE,
-            InfNan::NegativeNan => NUMERIC_NAN_NEGATIVE,
+            InfNan::PositiveInfinity => VALUE_MATH_INFINITY_POSITIVE,
+            InfNan::NegativeInfinity => VALUE_MATH_INFINITY_NEGATIVE,
+            InfNan::PositiveNan => VALUE_MATH_NAN_POSITIVE,
+            InfNan::NegativeNan => VALUE_MATH_NAN_NEGATIVE,
         }
     }
 }

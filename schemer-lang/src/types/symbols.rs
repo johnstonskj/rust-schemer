@@ -19,7 +19,7 @@ use std::str::FromStr;
 #[derive(Clone, Debug, PartialEq, PartialOrd, Eq, Ord)]
 pub struct Identifier(String);
 
-pub type Symbol = Identifier;
+pub const TYPE_NAME_SYMBOL: &str = "symbol";
 
 // ------------------------------------------------------------------------------------------------
 // Private Types
@@ -36,6 +36,12 @@ pub type Symbol = Identifier;
 impl SchemeRepr for Identifier {
     fn to_repr_string(&self) -> String {
         self.0.clone()
+    }
+}
+
+impl SchemeValue for Identifier {
+    fn type_name(&self) -> &'static str {
+        TYPE_NAME_SYMBOL
     }
 }
 
@@ -70,11 +76,11 @@ impl Identifier {
     pub fn is_valid(s: &str) -> bool {
         Self::from_str(s).is_ok()
     }
+
+    pub fn as_str(&self) -> &str {
+        self.0.as_str()
+    }
 }
-
-// ------------------------------------------------------------------------------------------------
-
-scheme_value!(Symbol, TYPE_NAME_SYMBOL, "symbol");
 
 // ------------------------------------------------------------------------------------------------
 // Private Functions

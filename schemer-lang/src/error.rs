@@ -7,7 +7,8 @@ More detailed description, with
 
 */
 
-use crate::types::exceptions::RuntimeError;
+use crate::read::datum::Label;
+use crate::types::{Identifier, SchemeRepr};
 use std::error::Error as StdError;
 use std::fmt::{Display, Formatter};
 
@@ -23,11 +24,20 @@ pub struct Error {
 
 #[derive(Debug)]
 pub enum ErrorKind {
+    // Parsing ------------------------------------------------------------------------------------
     Parser,
-    Value {
+    ParserState {
+        input: String,
+        state: Option<i32>,
+    },
+    ParseValue {
         kind: String,
         value: String,
     },
+    UnknownReference {
+        label: Label,
+    },
+    // Types --------------------------------------------------------------------------------------
     NumericTruncation {
         from: String,
         to: String,
@@ -40,7 +50,30 @@ pub enum ErrorKind {
         expected: String,
         actual: Option<String>,
     },
-    Runtime(RuntimeError),
+    // Values -------------------------------------------------------------------------------------
+    ImproperList,
+    UnexpectedValue {
+        name: String,
+        expected: String,
+        actual: String,
+    },
+    // Eval ---------------------------------------------------------------------------------------
+    UnboundVariable {
+        name: Identifier,
+    },
+    ProcedureArgumentCardinality {
+        name: String,
+        min: usize,
+        max: Option<usize>,
+        given: usize,
+    },
+    BadFormSyntax {
+        name: String,
+        value: String,
+    },
+    ImmutableEnvironment,
+    // Library ------------------------------------------------------------------------------------
+    Read,
     File,
 }
 
@@ -51,54 +84,6 @@ pub enum ErrorKind {
 // ------------------------------------------------------------------------------------------------
 // Public Functions
 // ------------------------------------------------------------------------------------------------
-
-pub fn make_value_error(kind: &'static str, value: &'static str) -> impl Fn() -> Error {
-    move || {
-        Error::from(ErrorKind::Value {
-            kind: kind.to_string(),
-            value: value.to_string(),
-        })
-    }
-}
-
-pub fn make_numeric_truncation_error(from: &'static str, to: &'static str) -> impl Fn() -> Error {
-    move || {
-        Error::from(ErrorKind::NumericTruncation {
-            from: from.to_string(),
-            to: to.to_string(),
-        })
-    }
-}
-
-pub fn make_type_cast_error(from: &'static str, to: &'static str) -> impl Fn() -> Error {
-    move || {
-        Error::from(ErrorKind::TypeCast {
-            from: from.to_string(),
-            to: to.to_string(),
-        })
-    }
-}
-
-pub fn make_unexpected_type_error(
-    expected: &'static str,
-    actual: &'static str,
-) -> impl Fn() -> Error {
-    move || {
-        Error::from(ErrorKind::UnexpectedType {
-            expected: expected.to_string(),
-            actual: Some(actual.to_string()),
-        })
-    }
-}
-
-pub fn make_unknown_unexpected_type_error(expected: &'static str) -> impl Fn() -> Error {
-    move || {
-        Error::from(ErrorKind::UnexpectedType {
-            expected: expected.to_string(),
-            actual: None,
-        })
-    }
-}
 
 // ------------------------------------------------------------------------------------------------
 // Implementations
@@ -170,7 +155,16 @@ impl Display for ErrorKind {
             "{}",
             match self {
                 ErrorKind::Parser => "Error parsing source code, see cause.".to_string(),
-                ErrorKind::Value { kind, value } =>
+                ErrorKind::ParserState { input, state } =>
+                    if let Some(state) = state {
+                        format!(
+                            "Unexpected input while parsing; input: {}, state: {}.",
+                            input, state
+                        )
+                    } else {
+                        format!("Unexpected input while parsing; input: {}.", input)
+                    },
+                ErrorKind::ParseValue { kind, value } =>
                     format!("Error in parsing the value '{}' as a {}.", value, kind),
                 ErrorKind::NumericTruncation { from, to } => format!(
                     "Could not convert from {} to {} without truncation, or loss of precision.",
@@ -179,18 +173,56 @@ impl Display for ErrorKind {
                 ErrorKind::TypeCast { from, to } =>
                     format!("Invalid cast attempt from type {} to type {}.", from, to),
                 ErrorKind::UnexpectedType { expected, actual } => format!(
-                    "Unexpected value type; expecting {}, received {}",
+                    "Unexpected value type; expecting: {}, given: {}.",
                     expected,
                     match actual {
                         None => "<unknown>",
                         Some(s) => s.as_str(),
                     }
                 ),
-                ErrorKind::Runtime(rte) => {
-                    rte.message().to_string()
+                ErrorKind::Read => {
+                    format!("Read error.")
                 }
                 ErrorKind::File => {
-                    format!("File I/O error")
+                    format!("File I/O error.")
+                }
+                ErrorKind::UnknownReference { label } => {
+                    format!("Unknown reference to non-shared object: #{}#.", label)
+                }
+                ErrorKind::UnboundVariable { name } => {
+                    format!("Unbound variable: '{}'.", name.to_repr_string())
+                }
+                ErrorKind::ImproperList => {
+                    String::from("Value was not a proper list.")
+                }
+                ErrorKind::ProcedureArgumentCardinality {
+                    name,
+                    min,
+                    max,
+                    given,
+                } => {
+                    format!(
+                        "The procedure '{}' was called with {}, it expects {}.",
+                        name,
+                        given_to_text(given),
+                        min_max_to_text(min, max)
+                    )
+                }
+                ErrorKind::BadFormSyntax { name, value } => {
+                    format!("Bad syntax in form '{}': {}.", name, value)
+                }
+                ErrorKind::UnexpectedValue {
+                    name,
+                    expected,
+                    actual,
+                } => {
+                    format!(
+                        "Unexpected value for {}, expected {}, not {}.",
+                        name, expected, actual
+                    )
+                }
+                ErrorKind::ImmutableEnvironment => {
+                    format!("The current environment is immutable.")
                 }
             }
         )
@@ -201,6 +233,28 @@ impl Display for ErrorKind {
 // Private Functions
 // ------------------------------------------------------------------------------------------------
 
+fn given_to_text(given: &usize) -> String {
+    match *given {
+        0 => "zero arguments".to_string(),
+        1 => "one argument".to_string(),
+        v => format!("{} arguments", v),
+    }
+}
+
+fn min_max_to_text(min: &usize, max: &Option<usize>) -> String {
+    let max = max.map(|v| v.to_string()).unwrap_or(String::from("many"));
+    if *min == 0 && max == "0" {
+        "zero".to_string()
+    } else if *min == 1 && max == "1" {
+        "only one".to_string()
+    } else if *min == 0 && max == "1" {
+        format!("zero or one")
+    } else if *min == 1 && max == "1" {
+        "only one".to_string()
+    } else {
+        format!("{} to {}", min, max)
+    }
+}
 // ------------------------------------------------------------------------------------------------
 // Modules
 // ------------------------------------------------------------------------------------------------

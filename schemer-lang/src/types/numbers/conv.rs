@@ -7,7 +7,7 @@ More detailed description, with
 
 */
 
-use crate::error::{make_type_cast_error, Error};
+use crate::error::{Error, ErrorKind};
 use crate::types::numbers::{
     ExactComplex, ExactReal, InexactComplex, InexactReal, InfNan, Integer, Number, Rational,
     TYPE_NAME_EXACT_COMPLEX, TYPE_NAME_EXACT_REAL, TYPE_NAME_INEXACT_COMPLEX,
@@ -387,6 +387,16 @@ impl TryFrom<Number> for ExactComplex {
 // ------------------------------------------------------------------------------------------------
 // Private Functions
 // ------------------------------------------------------------------------------------------------
+
+#[inline]
+fn make_type_cast_error(from: &'static str, to: &'static str) -> impl Fn() -> Error {
+    move || {
+        Error::from(ErrorKind::TypeCast {
+            from: from.to_string(),
+            to: to.to_string(),
+        })
+    }
+}
 
 // ------------------------------------------------------------------------------------------------
 // Modules
