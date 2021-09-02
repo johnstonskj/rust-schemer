@@ -24,6 +24,8 @@ pub trait SchemeValue: Debug + SchemeRepr {
 
 pub type Ref<T> = Arc<T>;
 
+pub type MutableRef<T> = Arc<RefCell<T>>;
+
 // ------------------------------------------------------------------------------------------------
 // Private Macros
 // ------------------------------------------------------------------------------------------------
@@ -59,6 +61,8 @@ macro_rules! scheme_value {
 // Modules
 // ------------------------------------------------------------------------------------------------
 
+// TODO: eof-object port error
+
 pub mod booleans;
 pub use booleans::Boolean;
 
@@ -82,4 +86,5 @@ pub mod symbols;
 pub use symbols::Identifier;
 
 pub mod vector;
+use std::cell::RefCell;
 pub use vector::Vector;

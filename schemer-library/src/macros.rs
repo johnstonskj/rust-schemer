@@ -67,7 +67,7 @@ macro_rules! is_a {
     ($fn_name:ident, $expr_type:ident) => {
         pub fn $fn_name(
             arguments: &[Expression],
-            _: &mut Ref<Environment>,
+            _: &mut MutableRef<Environment>,
         ) -> Result<Expression, Error> {
             Ok(Expression::Boolean(Boolean::from(matches!(
                 &arguments[0],
@@ -78,7 +78,7 @@ macro_rules! is_a {
     ($fn_name:ident, $expr_type:ident !) => {
         pub fn $fn_name(
             arguments: &[Expression],
-            _: &mut Ref<Environment>,
+            _: &mut MutableRef<Environment>,
         ) -> Result<Expression, Error> {
             Ok(Expression::Boolean(Boolean::from(matches!(
                 &arguments[0],
@@ -112,6 +112,40 @@ macro_rules! is_char_a {
     };
 }
 
+macro_rules! is_list_a {
+    ($predicate:ident) => {
+        is_list_a!($predicate, $predicate);
+    };
+    ($fn_name:ident, $predicate:ident) => {
+        is_list_a!($fn_name => |v: &Pair| v.$predicate());
+    };
+    ($fn_name:ident => $closure:expr) => {
+        pub fn $fn_name(
+            arguments: &[Expression],
+            _: &mut MutableRef<Environment>,
+        ) -> Result<Expression, Error> {
+            Ok(Expression::Boolean(Boolean::from(match &arguments[0] {
+                Expression::Quotation(v) => {
+                    if let Some(pair) = v.as_list() {
+                        $closure(pair)
+                    } else {
+                        return Err(Error::from(ErrorKind::UnexpectedType {
+                            expected: TYPE_NAME_LIST.to_string(),
+                            actual: Some(v.type_name().to_string()),
+                        }))
+                    }
+                },
+                e => {
+                    return Err(Error::from(ErrorKind::UnexpectedType {
+                        expected: TYPE_NAME_LIST.to_string(),
+                        actual: Some(e.type_name().to_string()),
+                    }))
+                }
+            })))
+        }
+    };
+}
+
 macro_rules! is_typed_a {
     ($predicate:ident, $expr_type:ident, $value_type:ty, $type_name:expr) => {
         is_typed_a!($predicate, $predicate, $expr_type, $value_type, $type_name);
@@ -122,7 +156,7 @@ macro_rules! is_typed_a {
     ($fn_name:ident => $closure:expr, $expr_type:ident, $value_type:ty, $type_name:expr) => {
         pub fn $fn_name(
             arguments: &[Expression],
-            _: &mut Ref<Environment>,
+            _: &mut MutableRef<Environment>,
         ) -> Result<Expression, Error> {
             Ok(Expression::Boolean(Boolean::from(match &arguments[0] {
                 Expression::$expr_type(v) => $closure(v),

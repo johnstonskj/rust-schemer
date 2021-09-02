@@ -13,7 +13,7 @@ use schemer_lang::eval::environment::Exports;
 use schemer_lang::eval::forms::TYPE_NAME_FORM;
 use schemer_lang::eval::procedures::{TYPE_NAME_BUILTIN_PROCEDURE, TYPE_NAME_PROCEDURE};
 use schemer_lang::eval::{Environment, Expression, Procedure};
-use schemer_lang::types::{Identifier, Ref, SchemeRepr, SchemeString, SchemeValue};
+use schemer_lang::types::{Identifier, MutableRef, SchemeRepr, SchemeString, SchemeValue};
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
@@ -47,13 +47,13 @@ pub fn schemer_repl_exports() -> Exports {
 
 fn print_current_environment(
     _: &[Expression],
-    env: &mut Ref<Environment>,
+    env: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
-    env.print();
+    env.borrow().print();
     Ok(Expression::Boolean(true.into()))
 }
 
-fn help(argument: &[Expression], _: &mut Ref<Environment>) -> Result<Expression, Error> {
+fn help(argument: &[Expression], _: &mut MutableRef<Environment>) -> Result<Expression, Error> {
     let expr = &argument[0];
     Ok(Expression::String(SchemeString::from(
         if let Expression::Procedure(procedure) = expr {
@@ -72,7 +72,7 @@ fn help(argument: &[Expression], _: &mut Ref<Environment>) -> Result<Expression,
     )))
 }
 
-fn inspect(argument: &[Expression], _: &mut Ref<Environment>) -> Result<Expression, Error> {
+fn inspect(argument: &[Expression], _: &mut MutableRef<Environment>) -> Result<Expression, Error> {
     Ok(Expression::String(SchemeString::from(format!(
         "{} => {}",
         &argument[0].to_repr_string(),

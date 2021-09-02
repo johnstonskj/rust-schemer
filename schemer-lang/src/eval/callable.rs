@@ -44,11 +44,13 @@ pub trait Callable: Clone + Debug + PartialEq + SchemeValue {
     }
 
     fn signature(&self) -> String {
+        println!("{:?}", self);
         let formal_arguments = if self.formal_arguments().is_empty() {
             String::new()
         } else {
             format!(
-                " {}",
+                " {}{}",
+                SYNTAX_LEFT_PARENTHESIS_CHAR,
                 self.formal_arguments()
                     .iter()
                     .map(|id| id.to_repr_string())
@@ -59,7 +61,7 @@ pub trait Callable: Clone + Debug + PartialEq + SchemeValue {
         let variadic_formal_argument =
             if let Some(variadic_formal_argument) = self.variadic_formal_argument() {
                 if self.formal_arguments().is_empty() {
-                    variadic_formal_argument.to_repr_string()
+                    format!(" {}", variadic_formal_argument.to_repr_string())
                 } else {
                     format!(" . {}", variadic_formal_argument.to_repr_string())
                 }
@@ -67,11 +69,16 @@ pub trait Callable: Clone + Debug + PartialEq + SchemeValue {
                 String::new()
             };
         format!(
-            "{}{}{}{}{}",
+            "{}{}{}{}{}{}",
             SYNTAX_LEFT_PARENTHESIS_CHAR,
             self.id().to_repr_string(),
             formal_arguments,
             variadic_formal_argument,
+            if formal_arguments.is_empty() {
+                String::new()
+            } else {
+                SYNTAX_RIGHT_PARENTHESIS_CHAR.to_string()
+            },
             SYNTAX_RIGHT_PARENTHESIS_CHAR
         )
     }

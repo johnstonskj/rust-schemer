@@ -16,7 +16,7 @@ use schemer_lang::error::{Error, ErrorKind};
 use schemer_lang::eval::environment::Exports;
 use schemer_lang::eval::{Environment, Expression, Procedure};
 use schemer_lang::types::numbers::TYPE_NAME_INTEGER;
-use schemer_lang::types::{Identifier, Number, Ref};
+use schemer_lang::types::{Identifier, MutableRef, Number};
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
@@ -58,7 +58,7 @@ pub fn scheme_r5rs_exports() -> Exports {
 
 pub fn null_environment(
     arguments: &[Expression],
-    _: &mut Ref<Environment>,
+    _: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     match &arguments[0] {
         Expression::Number(Number::Integer(v)) => Ok(Expression::Environment(
@@ -73,7 +73,7 @@ pub fn null_environment(
 
 fn scheme_report_environment(
     arguments: &[Expression],
-    _: &mut Ref<Environment>,
+    _: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     match &arguments[0] {
         Expression::Number(Number::Integer(v)) => Ok(Expression::Environment(

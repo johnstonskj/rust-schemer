@@ -559,22 +559,23 @@ fn parse_list(input_pair: Pair<'_, Rule>) -> Result<Datum, Error> {
 }
 
 fn parse_pair(input_pair: Pair<'_, Rule>) -> Result<DatumPair, Error> {
-    let mut inner_pairs = input_pair.into_inner();
-    let next_pair = inner_pairs.next().unwrap();
-    let car = if next_pair.as_rule() == Rule::datum {
-        parse_datum_inner(next_pair)?
-    } else {
-        unexpected_input!(next_pair);
-    };
+    let mut data = Vec::new();
+    for next_pair in input_pair.into_inner() {
+        if next_pair.as_rule() == Rule::datum {
+            data.push(parse_datum_inner(next_pair)?)
+        } else {
+            unexpected_input!(next_pair);
+        }
+    }
 
-    let next_pair = inner_pairs.next().unwrap();
-    let cdr = if next_pair.as_rule() == Rule::datum {
-        parse_datum_inner(next_pair)?
-    } else {
-        unexpected_input!(next_pair);
-    };
+    let cdr = data.remove(data.len() - 1);
+    let car = data.remove(data.len() - 1);
+    let mut head = DatumPair::cons(car.into(), cdr.into());
 
-    Ok(DatumPair::cons(car.into(), cdr.into()))
+    for datum in data.into_iter().rev() {
+        head = DatumPair::cons_list(Ref::new(datum), head);
+    }
+    Ok(head)
 }
 
 fn parse_vector(input_pair: Pair<'_, Rule>) -> Result<Datum, Error> {

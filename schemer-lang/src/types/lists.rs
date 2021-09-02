@@ -68,6 +68,17 @@ pub fn make_filled_list(k: usize, fill: &Datum) -> Pair {
     }
 }
 
+// pub fn vector_to_improper_list(mut data: Vector<Datum>) -> Pair {
+//     let cdr = data.remove(data.len() - 1);
+//     let car = data.remove(data.len() - 1);
+//     let mut head = Pair::cons(car.into(), cdr.into());
+//
+//     for datum in data.into_iter().rev() {
+//         head = Pair::cons_list(datum, head);
+//     }
+//     head
+// }
+
 pub fn vector_to_list(data: Vector<Datum>) -> Pair {
     let mut head = Pair::empty();
     for datum in data.iter().rev().cloned() {
@@ -219,13 +230,9 @@ impl Pair {
         }
     }
 
-    pub fn append(&mut self, rhs: Pair) -> Option<()> {
-        if let Some(last) = self.last_mut() {
-            last.cdr = Ref::new(Datum::List(rhs));
-            Some(())
-        } else {
-            None
-        }
+    pub fn append(&mut self, rhs: Pair) {
+        let last = self.last_mut();
+        last.cdr = Ref::new(Datum::List(rhs));
     }
 
     // pub fn reverse(list: List) -> List {}
@@ -242,23 +249,23 @@ impl Pair {
         }
     }
 
-    pub fn last(&self) -> Option<&Pair> {
-        if self.cdr.is_null() {
-            Some(self)
-        } else if let Datum::List(pair) = &*self.cdr {
-            pair.last()
+    pub fn last(&self) -> &Pair {
+        if let Datum::List(next) = &*self.cdr {
+            next.last()
         } else {
-            None
+            self
         }
     }
 
-    pub fn last_mut(&mut self) -> Option<&mut Pair> {
-        if self.cdr.is_null() {
-            Some(self)
-        } else if let Some(Datum::List(pair)) = Ref::get_mut(&mut self.cdr) {
-            pair.last_mut()
+    pub fn last_mut(&mut self) -> &mut Pair {
+        if !self.cdr.is_list() {
+            self
         } else {
-            None
+            if let Some(Datum::List(pair)) = Ref::get_mut(&mut self.cdr) {
+                Self::last_mut(pair)
+            } else {
+                unreachable!()
+            }
         }
     }
 

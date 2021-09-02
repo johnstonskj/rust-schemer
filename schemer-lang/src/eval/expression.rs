@@ -16,7 +16,7 @@ use crate::read::syntax_str::{SYNTAX_ABBR_QUOTE, VALUE_NULL_LIST};
 use crate::types::lists::TYPE_NAME_LIST;
 use crate::types::symbols::TYPE_NAME_SYMBOL;
 use crate::types::{
-    Boolean, ByteVector, Char, Identifier, Number, Pair, Ref, SchemeRepr, SchemeString,
+    Boolean, ByteVector, Char, Identifier, MutableRef, Number, Pair, Ref, SchemeRepr, SchemeString,
     SchemeValue, Vector,
 };
 use std::fmt::Debug;
@@ -40,7 +40,7 @@ pub enum Expression {
     Form(Form),
     Null,
     Unspecified,
-    Environment(Ref<Environment>),
+    Environment(MutableRef<Environment>),
 }
 
 pub const VALUE_NAME_UNSPECIFIED: &str = "#!unspecified";
@@ -55,11 +55,11 @@ pub const VALUE_NAME_UNSPECIFIED: &str = "#!unspecified";
 
 pub fn eval_datum(
     datum: Ref<Datum>,
-    environment: &mut Ref<Environment>,
+    environment: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     Ok(match datum.as_ref() {
         Datum::Symbol(v) => {
-            if let Some(value) = environment.get(&v) {
+            if let Some(value) = environment.borrow().get(&v) {
                 value.clone()
             } else {
                 return Error::from(ErrorKind::UnboundVariable { name: v.clone() }).into();
@@ -108,7 +108,7 @@ impl SchemeRepr for Expression {
             Self::Procedure(v) => v.to_repr_string(),
             Self::Null => VALUE_NULL_LIST.to_string(),
             Self::Unspecified => VALUE_NAME_UNSPECIFIED.to_string(),
-            Self::Environment(v) => v.to_repr_string(),
+            Self::Environment(v) => v.borrow().to_repr_string(),
             Expression::Form(v) => v.to_repr_string(),
         }
     }
@@ -128,7 +128,7 @@ impl SchemeValue for Expression {
             Expression::Procedure(v) => v.type_name(),
             Expression::Null => TYPE_NAME_LIST,
             Expression::Unspecified => VALUE_NAME_UNSPECIFIED,
-            Expression::Environment(v) => v.type_name(),
+            Expression::Environment(v) => v.borrow().type_name(),
             Expression::Form(v) => v.type_name(),
         }
     }
@@ -183,6 +183,13 @@ impl Expression {
         matches!(self, Self::Procedure(_))
     }
 
+    pub fn is_builtin_procedure(&self) -> bool {
+        match self {
+            Self::Procedure(p) => p.is_builtin(),
+            _ => false,
+        }
+    }
+
     pub fn is_null(&self) -> bool {
         matches!(self, Self::Null)
     }
@@ -206,11 +213,11 @@ impl Expression {
 
 fn call_or_form_from_list(
     from: &Pair,
-    environment: &mut Ref<Environment>,
+    environment: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     if from.is_proper_list() {
         if let Datum::Symbol(id) = &**from.car() {
-            let variable = environment.get(&id);
+            let variable = environment.borrow().get(&id);
             if let Some(Expression::Form(form)) = variable {
                 let form = form.clone();
                 form.call(&datum_to_vec(from.cdr().clone()), environment)
@@ -240,7 +247,7 @@ fn call_or_form_from_list(
 
 fn make_parameters(
     from: &Datum,
-    environment: &mut Ref<Environment>,
+    environment: &mut MutableRef<Environment>,
 ) -> Result<Vec<Expression>, Error> {
     if from.is_null() {
         Ok(Default::default())

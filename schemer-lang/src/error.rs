@@ -53,7 +53,7 @@ pub enum ErrorKind {
     // Values -------------------------------------------------------------------------------------
     ImproperList,
     UnexpectedValue {
-        name: String,
+        type_name: String,
         expected: String,
         actual: String,
     },
@@ -62,16 +62,20 @@ pub enum ErrorKind {
         name: Identifier,
     },
     ProcedureArgumentCardinality {
-        name: String,
+        name: Identifier,
         min: usize,
         max: Option<usize>,
         given: usize,
     },
     BadFormSyntax {
-        name: String,
+        name: Identifier,
         value: String,
     },
     ImmutableEnvironment,
+    ImmutableValue {
+        name: Identifier,
+        type_name: String,
+    },
     // Library ------------------------------------------------------------------------------------
     Read,
     File,
@@ -203,26 +207,33 @@ impl Display for ErrorKind {
                 } => {
                     format!(
                         "The procedure '{}' was called with {}, it expects {}.",
-                        name,
+                        name.to_repr_string(),
                         given_to_text(given),
                         min_max_to_text(min, max)
                     )
                 }
                 ErrorKind::BadFormSyntax { name, value } => {
-                    format!("Bad syntax in form '{}': {}.", name, value)
+                    format!("Bad syntax in form '{}': {}.", name.to_repr_string(), value)
                 }
                 ErrorKind::UnexpectedValue {
-                    name,
+                    type_name: name,
                     expected,
                     actual,
                 } => {
                     format!(
-                        "Unexpected value for {}, expected {}, not {}.",
+                        "Unexpected value for type {}, expected {}, not {}.",
                         name, expected, actual
                     )
                 }
                 ErrorKind::ImmutableEnvironment => {
                     format!("The current environment is immutable.")
+                }
+                ErrorKind::ImmutableValue { name, type_name } => {
+                    format!(
+                        "Cannot mutate the the {} value named '{}'.",
+                        type_name,
+                        name.to_repr_string()
+                    )
                 }
             }
         )

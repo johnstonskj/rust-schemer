@@ -17,7 +17,8 @@ use crate::read::syntax_str::{
     PSEUDO_SYNTAX_LEFT_PROCEDURE, PSEUDO_SYNTAX_RIGHT_PROCEDURE, SYNTAX_HYPHEN, SYNTAX_SPACE_CHAR,
 };
 use crate::types::new_type::NewType;
-use crate::types::{Identifier, Ref, SchemeRepr, SchemeValue};
+use crate::types::{Identifier, MutableRef, Ref, SchemeRepr, SchemeValue};
+use std::cell::RefCell;
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
@@ -27,7 +28,7 @@ use crate::types::{Identifier, Ref, SchemeRepr, SchemeValue};
 pub struct Environment {
     name: Option<String>,
     values: ExportList,
-    parent: Option<Ref<Environment>>,
+    parent: Option<MutableRef<Environment>>,
     immutable: bool,
 }
 
@@ -65,47 +66,53 @@ impl SchemeRepr for Environment {
 }
 
 impl Environment {
-    pub fn named(name: &str) -> Ref<Self> {
+    pub fn named(name: &str) -> MutableRef<Self> {
         Self {
             name: Some(name.to_string()),
             values: Default::default(),
             parent: None,
             immutable: false,
         }
-        .into()
+        .into_ref()
     }
 
-    pub fn top_level() -> Ref<Self> {
-        Environment::named("*top*").into()
+    pub fn top_level() -> MutableRef<Self> {
+        Environment::named("*top*")
     }
 
-    pub fn empty() -> Ref<Self> {
-        Environment::named("*empty*").into()
+    pub fn empty() -> MutableRef<Self> {
+        Environment::named("*empty*")
     }
 
-    pub fn new_child(parent: &Ref<Self>) -> Self {
+    pub fn new_child(parent: MutableRef<Self>) -> MutableRef<Self> {
         Self {
             name: None,
             values: Default::default(),
-            parent: Some(parent.clone()),
+            parent: Some(parent),
             immutable: false,
         }
+        .into_ref()
     }
 
-    pub fn new_child_named(parent: &Ref<Self>, name: &str) -> Self {
+    pub fn new_child_named(parent: MutableRef<Self>, name: &str) -> MutableRef<Self> {
         Self {
             name: Some(format!(
                 "*{}*",
                 name.replace(SYNTAX_SPACE_CHAR, SYNTAX_HYPHEN)
             )),
             values: Default::default(),
-            parent: Some(parent.clone()),
+            parent: Some(parent),
             immutable: false,
         }
+        .into_ref()
     }
 
-    pub fn return_to_parent(self) -> Option<Ref<Self>> {
+    pub fn return_to_parent(self) -> Option<MutableRef<Self>> {
         self.parent
+    }
+
+    pub fn into_ref(self) -> MutableRef<Self> {
+        Ref::from(RefCell::from(self))
     }
 
     pub fn insert(
@@ -117,6 +124,31 @@ impl Environment {
             Err(Error::from(ErrorKind::ImmutableEnvironment))
         } else {
             Ok(self.values.insert(name, value.into()))
+        }
+    }
+
+    pub fn update(
+        &mut self,
+        name: Identifier,
+        value: Expression,
+    ) -> Result<Option<Expression>, Error> {
+        if self.is_immutable() {
+            Err(Error::from(ErrorKind::ImmutableEnvironment))
+        } else {
+            if let Some(old_value) = self.values.get(&name) {
+                if old_value.is_form() || old_value.is_builtin_procedure() {
+                    Err(Error::from(ErrorKind::ImmutableValue {
+                        name,
+                        type_name: old_value.type_name().to_string(),
+                    }))
+                } else {
+                    Ok(self.values.insert(name, value))
+                }
+            } else if let Some(parent) = &mut self.parent {
+                parent.borrow_mut().update(name, value)
+            } else {
+                Err(Error::from(ErrorKind::UnboundVariable { name }))
+            }
         }
     }
 
@@ -142,17 +174,17 @@ impl Environment {
         }
     }
 
-    pub fn get(&self, name: &Identifier) -> Option<&Expression> {
+    pub fn get(&self, name: &Identifier) -> Option<Expression> {
         match (self.values.get(name), &self.parent) {
-            (None, Some(parent)) => parent.get(name),
-            (Some(value), _) => Some(value),
+            (None, Some(parent)) => parent.borrow().get(name),
+            (Some(value), _) => Some(value.clone()),
             _ => None,
         }
     }
 
     pub fn is_bound(&self, name: &Identifier) -> bool {
         match (self.values.contains_key(name), &self.parent) {
-            (false, Some(parent)) => parent.is_bound(name),
+            (false, Some(parent)) => parent.borrow().is_bound(name),
             (true, _) => true,
             _ => false,
         }
@@ -193,7 +225,7 @@ impl Environment {
             }
         }
         if let Some(parent) = &self.parent {
-            parent.print_inner(&format!("{}│  ", prefix));
+            parent.borrow().print_inner(&format!("{}│  ", prefix));
             println!("{}└╴ ", prefix);
         }
     }
@@ -202,7 +234,7 @@ impl Environment {
         self.parent.is_some()
     }
 
-    pub fn parent(&self) -> Option<&Ref<Environment>> {
+    pub fn parent(&self) -> Option<&MutableRef<Self>> {
         self.parent.as_ref()
     }
 

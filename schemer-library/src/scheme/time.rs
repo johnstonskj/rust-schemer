@@ -10,7 +10,7 @@ More detailed description, with
 use num::traits::ToPrimitive;
 use schemer_lang::error::Error;
 use schemer_lang::eval::{Environment, ExportList, Expression, Procedure};
-use schemer_lang::types::{Identifier, InexactReal, Integer, Number, Ref};
+use schemer_lang::types::{Identifier, InexactReal, Integer, MutableRef, Number};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 // ------------------------------------------------------------------------------------------------
@@ -37,13 +37,19 @@ pub fn scheme_time_exports() -> ExportList {
     exports
 }
 
-pub fn current_second(_: &[Expression], _: &mut Ref<Environment>) -> Result<Expression, Error> {
+pub fn current_second(
+    _: &[Expression],
+    _: &mut MutableRef<Environment>,
+) -> Result<Expression, Error> {
     Ok(Expression::Number(Number::InexactReal(InexactReal::from(
         SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs_f64(),
     ))))
 }
 
-pub fn current_jiffy(_: &[Expression], _: &mut Ref<Environment>) -> Result<Expression, Error> {
+pub fn current_jiffy(
+    _: &[Expression],
+    _: &mut MutableRef<Environment>,
+) -> Result<Expression, Error> {
     // TODO: remove unwraps
     let duration = SystemTime::now().duration_since(UNIX_EPOCH)?;
     let secs = duration
@@ -58,7 +64,10 @@ pub fn current_jiffy(_: &[Expression], _: &mut Ref<Environment>) -> Result<Expre
     ))))
 }
 
-pub fn jiffies_per_second(_: &[Expression], _: &mut Ref<Environment>) -> Result<Expression, Error> {
+pub fn jiffies_per_second(
+    _: &[Expression],
+    _: &mut MutableRef<Environment>,
+) -> Result<Expression, Error> {
     Ok(Expression::Number(Number::Integer(Integer::from(
         Integer::from(JIFFIES_PER_SECOND),
     ))))

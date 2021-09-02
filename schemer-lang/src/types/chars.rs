@@ -103,7 +103,7 @@ impl TryFrom<u32> for Char {
     fn try_from(c: u32) -> Result<Self, Self::Error> {
         if !is_valid_codepoint(c) || !is_valid_char(c) {
             return Err(Error::from(ErrorKind::UnexpectedValue {
-                name: TYPE_NAME_CHAR.to_string(),
+                type_name: TYPE_NAME_CHAR.to_string(),
                 actual: format!("{}{:X}", SYNTAX_HEX_CHAR_PREFIX, c),
                 expected: "valid Unicode codepoint".to_string(),
             }));

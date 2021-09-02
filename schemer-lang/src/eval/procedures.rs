@@ -12,7 +12,7 @@ use crate::eval::callable::Callable;
 use crate::eval::{eval_datum, Environment, Expression};
 use crate::read::datum::Datum;
 
-use crate::types::{Identifier, Ref, SchemeRepr, SchemeValue};
+use crate::types::{Identifier, MutableRef, Ref, SchemeValue};
 use std::fmt::{Debug, Formatter};
 
 // ------------------------------------------------------------------------------------------------
@@ -34,7 +34,7 @@ pub enum ProcedureBody {
 }
 
 pub type BuiltinFn =
-    &'static dyn Fn(&[Expression], &mut Ref<Environment>) -> Result<Expression, Error>;
+    &'static dyn Fn(&[Expression], &mut MutableRef<Environment>) -> Result<Expression, Error>;
 
 pub const TYPE_NAME_BUILTIN_PROCEDURE: &str = "builtin-procedure";
 
@@ -75,11 +75,11 @@ impl PartialEq for ProcedureBody {
             (Self::Builtin(lhs), Self::Builtin(rhs)) => {
                 lhs as *const dyn Fn(
                     &[Expression],
-                    &mut Ref<Environment>,
+                    &mut MutableRef<Environment>,
                 ) -> Result<Expression, Error>
                     == rhs as *const dyn Fn(
                         &[Expression],
-                        &mut Ref<Environment>,
+                        &mut MutableRef<Environment>,
                     ) -> Result<Expression, Error>
             }
             (Self::Lambda(lhs), Self::Lambda(rhs)) => lhs == rhs,
@@ -88,9 +88,14 @@ impl PartialEq for ProcedureBody {
     }
 }
 
+// ------------------------------------------------------------------------------------------------
+
 impl SchemeValue for Procedure {
     fn type_name(&self) -> &'static str {
-        TYPE_NAME_PROCEDURE
+        match &self.body {
+            ProcedureBody::Builtin(_) => TYPE_NAME_BUILTIN_PROCEDURE,
+            ProcedureBody::Lambda(_) => TYPE_NAME_PROCEDURE,
+        }
     }
 }
 
@@ -144,17 +149,21 @@ impl Procedure {
         }
     }
 
+    pub fn is_builtin(&self) -> bool {
+        matches!(self.body, ProcedureBody::Builtin(_))
+    }
+
     pub fn call(
         &self,
         arguments: &[Expression],
-        environment: &mut Ref<Environment>,
+        environment: &mut MutableRef<Environment>,
     ) -> Result<Expression, Error> {
         let argument_len = arguments.len();
         if argument_len < self.min_arg_count()
             || (!self.has_variadic_argument() && argument_len > self.max_arg_count().unwrap())
         {
             return Err(Error::from(ErrorKind::ProcedureArgumentCardinality {
-                name: self.id.to_repr_string(),
+                name: self.id.clone(),
                 min: self.min_arg_count(),
                 max: self.max_arg_count(),
                 given: argument_len,
@@ -163,13 +172,15 @@ impl Procedure {
         match &self.body {
             ProcedureBody::Builtin(body) => (body)(arguments, environment),
             ProcedureBody::Lambda(body) => {
-                let mut environment = Environment::new_child_named(environment, self.id().as_str());
+                let mut environment =
+                    Environment::new_child_named(environment.clone(), self.id().as_str());
 
                 for (i, argument) in arguments.iter().enumerate() {
-                    environment.insert(self.formals.get(i).unwrap().clone(), argument.clone())?;
+                    environment
+                        .borrow_mut()
+                        .insert(self.formals.get(i).unwrap().clone(), argument.clone())?;
                 }
 
-                let mut environment = Ref::new(environment);
                 body.iter().fold(Ok(Expression::Unspecified), |_, datum| {
                     eval_datum(datum.clone(), &mut environment)
                 })

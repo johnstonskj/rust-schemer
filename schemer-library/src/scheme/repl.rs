@@ -11,7 +11,7 @@ use crate::{make_preset_environment, PresetEnvironmentKind};
 use schemer_lang::error::Error;
 use schemer_lang::eval::environment::Exports;
 use schemer_lang::eval::{Environment, Expression, Procedure};
-use schemer_lang::types::{Identifier, Ref};
+use schemer_lang::types::{Identifier, MutableRef};
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
@@ -43,7 +43,7 @@ pub fn scheme_repl_exports() -> Exports {
 
 fn interaction_environment(
     _: &[Expression],
-    _: &mut Ref<Environment>,
+    _: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     Ok(Expression::Environment(make_preset_environment(
         PresetEnvironmentKind::Interaction,

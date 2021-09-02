@@ -10,7 +10,7 @@ More detailed description, with
 use schemer_lang::error::Error;
 use schemer_lang::eval::environment::Exports;
 use schemer_lang::eval::{Environment, Expression, Procedure};
-use schemer_lang::types::{Boolean, Identifier, Ref};
+use schemer_lang::types::{Boolean, Identifier, MutableRef};
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
@@ -46,41 +46,50 @@ pub fn schemer_environment_exports() -> Exports {
 // Private Functions
 // ------------------------------------------------------------------------------------------------
 
-fn current_environment(_: &[Expression], env: &mut Ref<Environment>) -> Result<Expression, Error> {
+fn current_environment(
+    _: &[Expression],
+    env: &mut MutableRef<Environment>,
+) -> Result<Expression, Error> {
     Ok(Expression::Environment(env.clone()))
 }
 
 is_a!(is_environment, Environment);
 
-fn is_immutable(arguments: &[Expression], _: &mut Ref<Environment>) -> Result<Expression, Error> {
+fn is_immutable(
+    arguments: &[Expression],
+    _: &mut MutableRef<Environment>,
+) -> Result<Expression, Error> {
     Ok(Expression::Boolean(Boolean::from(
         if let Expression::Environment(env) = &arguments[0] {
-            env.is_immutable()
+            env.borrow().is_immutable()
         } else {
             false
         },
     )))
 }
 
-fn has_parent(arguments: &[Expression], _: &mut Ref<Environment>) -> Result<Expression, Error> {
+fn has_parent(
+    arguments: &[Expression],
+    _: &mut MutableRef<Environment>,
+) -> Result<Expression, Error> {
     Ok(Expression::Boolean(Boolean::from(
         if let Expression::Environment(env) = &arguments[0] {
-            env.has_parent()
+            env.borrow().has_parent()
         } else {
             false
         },
     )))
 }
 
-fn is_bound(_: &[Expression], _env: &mut Ref<Environment>) -> Result<Expression, Error> {
+fn is_bound(_: &[Expression], _env: &mut MutableRef<Environment>) -> Result<Expression, Error> {
     todo!()
 }
 
-fn bound_names(_: &[Expression], _env: &mut Ref<Environment>) -> Result<Expression, Error> {
+fn bound_names(_: &[Expression], _env: &mut MutableRef<Environment>) -> Result<Expression, Error> {
     todo!()
 }
 
-fn bindings(_: &[Expression], _env: &mut Ref<Environment>) -> Result<Expression, Error> {
+fn bindings(_: &[Expression], _env: &mut MutableRef<Environment>) -> Result<Expression, Error> {
     todo!()
 }
 

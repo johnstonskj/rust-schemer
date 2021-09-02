@@ -16,7 +16,7 @@ use crate::schemer::repl::schemer_repl_exports;
 use schemer_lang::error::{Error, ErrorKind};
 use schemer_lang::eval::forms::standard_form_exports;
 use schemer_lang::eval::Environment;
-use schemer_lang::types::{Integer, Ref};
+use schemer_lang::types::{Integer, MutableRef};
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
@@ -37,26 +37,25 @@ pub enum PresetEnvironmentKind {
 // Public Functions
 // ------------------------------------------------------------------------------------------------
 
-pub fn make_preset_environment(preset: PresetEnvironmentKind) -> Result<Ref<Environment>, Error> {
+pub fn make_preset_environment(
+    preset: PresetEnvironmentKind,
+) -> Result<MutableRef<Environment>, Error> {
     match preset {
         PresetEnvironmentKind::Interaction => {
             let base = make_preset_environment(PresetEnvironmentKind::Report(5))?;
-            let mut repl = Environment::new_child_named(&base, "*repl*");
-            repl.import(schemer_repl_exports())?;
-            repl.import(schemer_environment_exports())?;
-            Ok(Ref::new(repl).into())
+            let repl = Environment::new_child_named(base, "*repl*");
+            repl.borrow_mut().import(schemer_repl_exports())?;
+            repl.borrow_mut().import(schemer_environment_exports())?;
+            Ok(repl)
         }
         PresetEnvironmentKind::Null(v) => {
             if v == 5 {
-                let mut top = Environment::top_level();
-                {
-                    let top = Ref::get_mut(&mut top).unwrap();
-                    top.import(standard_form_exports())?;
-                }
-                Ok(top.into())
+                let top = Environment::top_level();
+                top.borrow_mut().import(standard_form_exports())?;
+                Ok(top)
             } else {
                 Err(Error::from(ErrorKind::UnexpectedValue {
-                    name: "version".to_string(),
+                    type_name: "version".to_string(),
                     expected: "5".to_string(),
                     actual: v.to_string(),
                 }))
@@ -64,9 +63,9 @@ pub fn make_preset_environment(preset: PresetEnvironmentKind) -> Result<Ref<Envi
         }
         PresetEnvironmentKind::Report(v) => {
             let base = make_preset_environment(PresetEnvironmentKind::Null(v))?;
-            let mut report = Environment::new_child_named(&base, &format!("r{}rs", v));
-            report.import(scheme_r5rs_exports())?;
-            Ok(Ref::new(report).into())
+            let report = Environment::new_child_named(base, &format!("r{}rs", v));
+            report.borrow_mut().import(scheme_r5rs_exports())?;
+            Ok(report)
         }
     }
 }

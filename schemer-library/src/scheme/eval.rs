@@ -10,7 +10,7 @@ More detailed description, with
 use schemer_lang::error::Error;
 use schemer_lang::eval::environment::Exports;
 use schemer_lang::eval::{Environment, Expression, Procedure};
-use schemer_lang::types::{Identifier, Ref};
+use schemer_lang::types::{Identifier, MutableRef};
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
@@ -33,11 +33,14 @@ pub fn scheme_eval_exports() -> Exports {
     exports
 }
 
-pub fn environment(_args: &[Expression], _: &mut Ref<Environment>) -> Result<Expression, Error> {
+pub fn environment(
+    _args: &[Expression],
+    _: &mut MutableRef<Environment>,
+) -> Result<Expression, Error> {
     todo!()
 }
 
-pub fn eval(args: &[Expression], _: &mut Ref<Environment>) -> Result<Expression, Error> {
+pub fn eval(args: &[Expression], _: &mut MutableRef<Environment>) -> Result<Expression, Error> {
     Ok(args[0].clone())
 }
 

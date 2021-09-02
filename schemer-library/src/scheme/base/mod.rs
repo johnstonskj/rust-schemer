@@ -14,7 +14,7 @@ use schemer_lang::eval::{forms, Procedure};
 use schemer_lang::eval::{Environment, Expression};
 use schemer_lang::read::datum::Datum;
 use schemer_lang::types::lists::vector_to_list;
-use schemer_lang::types::{Identifier, Ref};
+use schemer_lang::types::{Identifier, MutableRef};
 use schemer_lang::{IMPLEMENTATION_NAME, IMPLEMENTATION_VERSION};
 
 // ------------------------------------------------------------------------------------------------
@@ -47,7 +47,10 @@ pub fn scheme_base_exports() -> Exports {
 // Private Functions
 // ------------------------------------------------------------------------------------------------
 
-fn features(_: &[Expression], environment: &mut Ref<Environment>) -> Result<Expression, Error> {
+fn features(
+    _: &[Expression],
+    environment: &mut MutableRef<Environment>,
+) -> Result<Expression, Error> {
     forms::quote(
         &[Datum::List(vector_to_list(
             vec![
