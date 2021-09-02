@@ -46,14 +46,14 @@ pub fn schemer_repl_exports() -> Exports {
 // ------------------------------------------------------------------------------------------------
 
 fn print_current_environment(
-    _: &[Expression],
+    _: Vec<Expression>,
     env: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     env.borrow().print();
     Ok(Expression::Boolean(true.into()))
 }
 
-fn help(argument: &[Expression], _: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+fn help(argument: Vec<Expression>, _: &mut MutableRef<Environment>) -> Result<Expression, Error> {
     let expr = &argument[0];
     Ok(Expression::String(SchemeString::from(
         if let Expression::Procedure(procedure) = expr {
@@ -72,7 +72,10 @@ fn help(argument: &[Expression], _: &mut MutableRef<Environment>) -> Result<Expr
     )))
 }
 
-fn inspect(argument: &[Expression], _: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+fn inspect(
+    argument: Vec<Expression>,
+    _: &mut MutableRef<Environment>,
+) -> Result<Expression, Error> {
     Ok(Expression::String(SchemeString::from(format!(
         "{} => {}",
         &argument[0].to_repr_string(),

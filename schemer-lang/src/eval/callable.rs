@@ -7,18 +7,20 @@ More detailed description, with
 
 */
 
-use crate::read::syntax_str::{
-    PSEUDO_SYNTAX_COLON_CHAR, PSEUDO_SYNTAX_LEFT_PROCEDURE, PSEUDO_SYNTAX_RANGE,
-    PSEUDO_SYNTAX_RIGHT_PROCEDURE, SYNTAX_LEFT_PARENTHESIS_CHAR, SYNTAX_RIGHT_PARENTHESIS_CHAR,
-};
-use crate::types::{Identifier, SchemeRepr, SchemeValue};
+use crate::error::Error;
+use crate::eval::{Environment, Expression};
+use crate::read::syntax_str::{SYNTAX_LEFT_PARENTHESIS_CHAR, SYNTAX_RIGHT_PARENTHESIS_CHAR};
+use crate::types::{Identifier, MutableRef, SchemeRepr, SchemeValue};
 use std::fmt::Debug;
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
 // ------------------------------------------------------------------------------------------------
 
-pub trait Callable: Clone + Debug + PartialEq + SchemeValue {
+pub trait Callable<T>: Clone + Debug + PartialEq + SchemeValue
+where
+    T: Clone + Debug + PartialEq,
+{
     fn id(&self) -> &Identifier;
 
     fn rename(&mut self, id: Identifier);
@@ -82,6 +84,12 @@ pub trait Callable: Clone + Debug + PartialEq + SchemeValue {
             SYNTAX_RIGHT_PARENTHESIS_CHAR
         )
     }
+
+    fn call(
+        &self,
+        arguments: Vec<T>,
+        environment: &mut MutableRef<Environment>,
+    ) -> Result<Expression, Error>;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -95,23 +103,6 @@ pub trait Callable: Clone + Debug + PartialEq + SchemeValue {
 // ------------------------------------------------------------------------------------------------
 // Implementations
 // ------------------------------------------------------------------------------------------------
-
-impl<T: Callable> SchemeRepr for T {
-    fn to_repr_string(&self) -> String {
-        format!(
-            "{}{}{}{}{}{}{}{}{}",
-            PSEUDO_SYNTAX_LEFT_PROCEDURE,
-            self.type_name(),
-            PSEUDO_SYNTAX_COLON_CHAR,
-            self.id().to_repr_string(),
-            PSEUDO_SYNTAX_COLON_CHAR,
-            self.min_arg_count(),
-            PSEUDO_SYNTAX_RANGE,
-            self.max_arg_count().unwrap_or_default(),
-            PSEUDO_SYNTAX_RIGHT_PROCEDURE
-        )
-    }
-}
 
 // ------------------------------------------------------------------------------------------------
 // Private Functions

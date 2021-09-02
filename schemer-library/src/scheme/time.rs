@@ -38,7 +38,7 @@ pub fn scheme_time_exports() -> ExportList {
 }
 
 pub fn current_second(
-    _: &[Expression],
+    _: Vec<Expression>,
     _: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     Ok(Expression::Number(Number::InexactReal(InexactReal::from(
@@ -47,7 +47,7 @@ pub fn current_second(
 }
 
 pub fn current_jiffy(
-    _: &[Expression],
+    _: Vec<Expression>,
     _: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     // TODO: remove unwraps
@@ -65,7 +65,7 @@ pub fn current_jiffy(
 }
 
 pub fn jiffies_per_second(
-    _: &[Expression],
+    _: Vec<Expression>,
     _: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     Ok(Expression::Number(Number::Integer(Integer::from(

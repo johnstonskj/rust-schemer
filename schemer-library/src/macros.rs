@@ -66,7 +66,7 @@ macro_rules! builtin {
 macro_rules! is_a {
     ($fn_name:ident, $expr_type:ident) => {
         pub fn $fn_name(
-            arguments: &[Expression],
+            arguments: Vec<Expression>,
             _: &mut MutableRef<Environment>,
         ) -> Result<Expression, Error> {
             Ok(Expression::Boolean(Boolean::from(matches!(
@@ -77,7 +77,7 @@ macro_rules! is_a {
     };
     ($fn_name:ident, $expr_type:ident !) => {
         pub fn $fn_name(
-            arguments: &[Expression],
+            arguments: Vec<Expression>,
             _: &mut MutableRef<Environment>,
         ) -> Result<Expression, Error> {
             Ok(Expression::Boolean(Boolean::from(matches!(
@@ -121,7 +121,7 @@ macro_rules! is_list_a {
     };
     ($fn_name:ident => $closure:expr) => {
         pub fn $fn_name(
-            arguments: &[Expression],
+            arguments: Vec<Expression>,
             _: &mut MutableRef<Environment>,
         ) -> Result<Expression, Error> {
             Ok(Expression::Boolean(Boolean::from(match &arguments[0] {
@@ -155,7 +155,7 @@ macro_rules! is_typed_a {
     };
     ($fn_name:ident => $closure:expr, $expr_type:ident, $value_type:ty, $type_name:expr) => {
         pub fn $fn_name(
-            arguments: &[Expression],
+            arguments: Vec<Expression>,
             _: &mut MutableRef<Environment>,
         ) -> Result<Expression, Error> {
             Ok(Expression::Boolean(Boolean::from(match &arguments[0] {

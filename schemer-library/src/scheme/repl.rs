@@ -42,7 +42,7 @@ pub fn scheme_repl_exports() -> Exports {
 // ------------------------------------------------------------------------------------------------
 
 fn interaction_environment(
-    _: &[Expression],
+    _: Vec<Expression>,
     _: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     Ok(Expression::Environment(make_preset_environment(

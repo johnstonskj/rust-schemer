@@ -47,7 +47,7 @@ pub fn schemer_environment_exports() -> Exports {
 // ------------------------------------------------------------------------------------------------
 
 fn current_environment(
-    _: &[Expression],
+    _: Vec<Expression>,
     env: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     Ok(Expression::Environment(env.clone()))
@@ -56,7 +56,7 @@ fn current_environment(
 is_a!(is_environment, Environment);
 
 fn is_immutable(
-    arguments: &[Expression],
+    arguments: Vec<Expression>,
     _: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     Ok(Expression::Boolean(Boolean::from(
@@ -69,7 +69,7 @@ fn is_immutable(
 }
 
 fn has_parent(
-    arguments: &[Expression],
+    arguments: Vec<Expression>,
     _: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     Ok(Expression::Boolean(Boolean::from(
@@ -81,15 +81,18 @@ fn has_parent(
     )))
 }
 
-fn is_bound(_: &[Expression], _env: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+fn is_bound(_: Vec<Expression>, _env: &mut MutableRef<Environment>) -> Result<Expression, Error> {
     todo!()
 }
 
-fn bound_names(_: &[Expression], _env: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+fn bound_names(
+    _: Vec<Expression>,
+    _env: &mut MutableRef<Environment>,
+) -> Result<Expression, Error> {
     todo!()
 }
 
-fn bindings(_: &[Expression], _env: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+fn bindings(_: Vec<Expression>, _env: &mut MutableRef<Environment>) -> Result<Expression, Error> {
     todo!()
 }
 

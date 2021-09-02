@@ -13,11 +13,13 @@ use crate::eval::environment::Exports;
 use crate::eval::{eval_datum, Environment, Expression, Procedure};
 use crate::read::datum::{datum_to_vec, Datum};
 use crate::read::syntax_str::{
-    FORM_NAME_IF, FORM_NAME_LAMBDA, FORM_NAME_LAMBDA_ALT, FORM_NAME_QUOTE, FORM_NAME_SET,
+    FORM_NAME_BEGIN, FORM_NAME_DEFINE, FORM_NAME_IF, FORM_NAME_LAMBDA, FORM_NAME_LAMBDA_ALT,
+    FORM_NAME_QUOTE, FORM_NAME_SET, PSEUDO_SYNTAX_COLON_CHAR, PSEUDO_SYNTAX_LEFT_PROCEDURE,
+    PSEUDO_SYNTAX_RANGE, PSEUDO_SYNTAX_RIGHT_PROCEDURE,
 };
-use crate::types::lists::list_to_vec;
+use crate::types::lists::{list_to_vec, TYPE_NAME_LIST};
 use crate::types::symbols::TYPE_NAME_SYMBOL;
-use crate::types::{Identifier, MutableRef, Ref, SchemeValue};
+use crate::types::{Identifier, MutableRef, Ref, SchemeRepr, SchemeValue};
 use std::fmt::{Debug, Formatter};
 
 // ------------------------------------------------------------------------------------------------
@@ -33,7 +35,7 @@ pub struct Form {
 }
 
 pub type FormFn =
-    &'static dyn Fn(&[Ref<Datum>], &mut MutableRef<Environment>) -> Result<Expression, Error>;
+    &'static dyn Fn(Vec<Ref<Datum>>, &mut MutableRef<Environment>) -> Result<Expression, Error>;
 
 pub const TYPE_NAME_FORM: &str = "standard-form";
 
@@ -97,6 +99,10 @@ pub fn standard_form_exports() -> Exports {
 
     export_standard_form!(exports, FORM_NAME_SET => set_bang "variable" "expression");
 
+    export_standard_form!(exports, FORM_NAME_BEGIN => begin ; "expression-or-definition");
+
+    export_standard_form!(exports, FORM_NAME_DEFINE => define "variable-or-formals" "expression-or-body");
+
     exports
 }
 
@@ -125,14 +131,31 @@ impl PartialEq for Form {
             && self.variadic_formal == other.variadic_formal
             && self.body
                 as *const dyn Fn(
-                    &[Ref<Datum>],
+                    Vec<Ref<Datum>>,
                     &mut MutableRef<Environment>,
                 ) -> Result<Expression, Error>
                 == other.body
                     as *const dyn Fn(
-                        &[Ref<Datum>],
+                        Vec<Ref<Datum>>,
                         &mut MutableRef<Environment>,
                     ) -> Result<Expression, Error>
+    }
+}
+
+impl SchemeRepr for Form {
+    fn to_repr_string(&self) -> String {
+        format!(
+            "{}{}{}{}{}{}{}{}{}",
+            PSEUDO_SYNTAX_LEFT_PROCEDURE,
+            self.type_name(),
+            PSEUDO_SYNTAX_COLON_CHAR,
+            self.id().to_repr_string(),
+            PSEUDO_SYNTAX_COLON_CHAR,
+            self.min_arg_count(),
+            PSEUDO_SYNTAX_RANGE,
+            self.max_arg_count().unwrap_or_default(),
+            PSEUDO_SYNTAX_RIGHT_PROCEDURE
+        )
     }
 }
 
@@ -142,7 +165,7 @@ impl SchemeValue for Form {
     }
 }
 
-impl Callable for Form {
+impl Callable<Ref<Datum>> for Form {
     fn id(&self) -> &Identifier {
         &self.id
     }
@@ -158,24 +181,10 @@ impl Callable for Form {
     fn variadic_formal_argument(&self) -> &Option<Identifier> {
         &self.variadic_formal
     }
-}
 
-impl Form {
-    pub fn new(id: &str, formals: Vec<&str>, variadic_formal: Option<&str>, body: FormFn) -> Self {
-        Self {
-            id: Identifier::from_str_unchecked(id),
-            formals: formals
-                .iter()
-                .map(|i| Identifier::from_str_unchecked(i))
-                .collect(),
-            variadic_formal: variadic_formal.map(|i| Identifier::from_str_unchecked(i)),
-            body,
-        }
-    }
-
-    pub fn call(
+    fn call(
         &self,
-        arguments: &[Ref<Datum>],
+        arguments: Vec<Ref<Datum>>,
         environment: &mut MutableRef<Environment>,
     ) -> Result<Expression, Error> {
         let argument_len = arguments.len();
@@ -191,14 +200,33 @@ impl Form {
     }
 }
 
+impl Form {
+    pub fn new(id: &str, formals: Vec<&str>, variadic_formal: Option<&str>, body: FormFn) -> Self {
+        Self {
+            id: Identifier::from_str_unchecked(id),
+            formals: formals
+                .iter()
+                .map(|i| Identifier::from_str_unchecked(i))
+                .collect(),
+            variadic_formal: variadic_formal.map(|i| Identifier::from_str_unchecked(i)),
+            body,
+        }
+    }
+}
+
 // ------------------------------------------------------------------------------------------------
 // Private Functions
 // ------------------------------------------------------------------------------------------------
 
+#[inline]
+pub fn head(arguments: &mut Vec<Ref<Datum>>) -> Ref<Datum> {
+    arguments.remove(0)
+}
+
 // §4.1.2. Literal expressions --------------------------------------------------------------------
 
 pub fn quote(
-    arguments: &[Ref<Datum>],
+    mut arguments: Vec<Ref<Datum>>,
     _env: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     if arguments.len() != 1 {
@@ -207,18 +235,17 @@ pub fn quote(
             value: format!("{:?}", arguments),
         }))
     } else {
-        Ok(Expression::Quotation(arguments[0].clone()))
+        Ok(Expression::Quotation(head(&mut arguments)))
     }
 }
 
 // §4.1.4. Procedures -----------------------------------------------------------------------------
 
 fn lambda(
-    arguments: &[Ref<Datum>],
+    mut arguments: Vec<Ref<Datum>>,
     _env: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
-    let formals = arguments[0].clone();
-    println!(">>formals>> {:?}", formals);
+    let formals = head(&mut arguments);
     let (formals, variadic): (Vec<Identifier>, Option<Identifier>) =
         if let Datum::Symbol(symbol) = &*formals {
             (vec![], Some(symbol.clone()))
@@ -227,13 +254,10 @@ fn lambda(
                 .into_iter()
                 .map(|d| datum_to_id(d))
                 .collect();
-            println!(">>vec>> {:?}", vector);
             if list.is_proper_list() {
                 (vector?, None)
             } else {
-                println!(">>list?>> {:?}", list);
                 let last_pair = list.last();
-
                 (vector?, Some(datum_to_id(last_pair.cdr().clone())?))
             }
         } else {
@@ -243,7 +267,7 @@ fn lambda(
             }));
         };
 
-    let bodies = datum_to_vec(arguments[1].clone());
+    let bodies = datum_to_vec(head(&mut arguments));
 
     Ok(Expression::Procedure(Procedure::new_lambda(
         Identifier::from_str_unchecked("|<unknown>|"),
@@ -267,16 +291,16 @@ fn datum_to_id(datum: Ref<Datum>) -> Result<Identifier, Error> {
 // §4.1.5. Conditionals ---------------------------------------------------------------------------
 
 fn conditional(
-    arguments: &[Ref<Datum>],
+    mut arguments: Vec<Ref<Datum>>,
     environment: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
-    let test = arguments[0].clone();
+    let test = head(&mut arguments);
     let result = eval_datum(test, environment)?;
     if result.is_true() {
-        let consequent = arguments[1].clone();
+        let consequent = head(&mut arguments);
         eval_datum(consequent, environment)
-    } else if arguments.len() == 3 {
-        let alternate = arguments[2].clone();
+    } else if !arguments.is_empty() {
+        let alternate = head(&mut arguments);
         eval_datum(alternate, environment)
     } else {
         Ok(Expression::Unspecified)
@@ -285,10 +309,13 @@ fn conditional(
 
 // §4.1.6. Assignments ----------------------------------------------------------------------------
 
-fn set_bang(params: &[Ref<Datum>], env: &mut MutableRef<Environment>) -> Result<Expression, Error> {
-    let variable = params[0].clone();
+fn set_bang(
+    mut arguments: Vec<Ref<Datum>>,
+    env: &mut MutableRef<Environment>,
+) -> Result<Expression, Error> {
+    let variable = head(&mut arguments);
     if let Datum::Symbol(id) = &*variable {
-        let expr = eval_datum(params[1].clone(), env)?;
+        let expr = eval_datum(head(&mut arguments), env)?;
         env.borrow_mut().update(id.clone(), expr)?;
         Ok(Expression::Unspecified)
     } else {
@@ -302,14 +329,14 @@ fn set_bang(params: &[Ref<Datum>], env: &mut MutableRef<Environment>) -> Result<
 // §4.1.7. Inclusion ------------------------------------------------------------------------------
 
 fn include(
-    _params: &[Ref<Datum>],
+    _arguments: Vec<Ref<Datum>>,
     _env: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     todo!()
 }
 
 fn include_ci(
-    _params: &[Ref<Datum>],
+    _arguments: Vec<Ref<Datum>>,
     _env: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     todo!()
@@ -317,32 +344,50 @@ fn include_ci(
 
 // §4.2. Derived expression types -----------------------------------------------------------------
 
-fn cond(_params: &[Ref<Datum>], _env: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+fn cond(
+    _arguments: Vec<Ref<Datum>>,
+    _env: &mut MutableRef<Environment>,
+) -> Result<Expression, Error> {
     todo!()
 }
 
-fn case(_params: &[Ref<Datum>], _env: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+fn case(
+    _arguments: Vec<Ref<Datum>>,
+    _env: &mut MutableRef<Environment>,
+) -> Result<Expression, Error> {
     todo!()
 }
 
-fn and(_params: &[Ref<Datum>], _env: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+fn and(
+    _arguments: Vec<Ref<Datum>>,
+    _env: &mut MutableRef<Environment>,
+) -> Result<Expression, Error> {
     todo!()
 }
 
-fn or(_params: &[Ref<Datum>], _env: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+fn or(
+    _arguments: Vec<Ref<Datum>>,
+    _env: &mut MutableRef<Environment>,
+) -> Result<Expression, Error> {
     todo!()
 }
 
-fn when(_params: &[Ref<Datum>], _env: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+fn when(
+    _arguments: Vec<Ref<Datum>>,
+    _env: &mut MutableRef<Environment>,
+) -> Result<Expression, Error> {
     todo!()
 }
 
-fn unless(_params: &[Ref<Datum>], _env: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+fn unless(
+    _arguments: Vec<Ref<Datum>>,
+    _env: &mut MutableRef<Environment>,
+) -> Result<Expression, Error> {
     todo!()
 }
 
 fn cond_expand(
-    _params: &[Ref<Datum>],
+    _arguments: Vec<Ref<Datum>>,
     _env: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     todo!()
@@ -351,42 +396,42 @@ fn cond_expand(
 // 4.2.2. Binding constructs ----------------------------------------------------------------------
 
 fn bind_let(
-    _params: &[Ref<Datum>],
+    _arguments: Vec<Ref<Datum>>,
     _env: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     todo!()
 }
 
 fn bind_let_star(
-    _params: &[Ref<Datum>],
+    _arguments: Vec<Ref<Datum>>,
     _env: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     todo!()
 }
 
 fn bind_let_rec(
-    _params: &[Ref<Datum>],
+    _arguments: Vec<Ref<Datum>>,
     _env: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     todo!()
 }
 
-fn bind_let_recstar(
-    _params: &[Ref<Datum>],
+fn bind_let_rec_star(
+    _arguments: Vec<Ref<Datum>>,
     _env: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     todo!()
 }
 
 fn bind_values_let(
-    _params: &[Ref<Datum>],
+    _arguments: Vec<Ref<Datum>>,
     _env: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     todo!()
 }
 
 fn bind_let_values_star(
-    _params: &[Ref<Datum>],
+    _arguments: Vec<Ref<Datum>>,
     _env: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     todo!()
@@ -394,21 +439,28 @@ fn bind_let_values_star(
 
 // 4.2.3. Sequencing ------------------------------------------------------------------------------
 
-fn begin(_params: &[Ref<Datum>], _env: &mut MutableRef<Environment>) -> Result<Expression, Error> {
-    todo!()
+fn begin(
+    arguments: Vec<Ref<Datum>>,
+    environment: &mut MutableRef<Environment>,
+) -> Result<Expression, Error> {
+    arguments
+        .into_iter()
+        .fold(Ok(Expression::Unspecified), |_, datum| {
+            eval_datum(datum, environment)
+        })
 }
 
 // 4.2.4. Iteration -------------------------------------------------------------------------------
 
 fn iter_do(
-    _params: &[Ref<Datum>],
+    _arguments: Vec<Ref<Datum>>,
     _env: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     todo!()
 }
 
 fn iter_let(
-    _params: &[Ref<Datum>],
+    _arguments: Vec<Ref<Datum>>,
     _env: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     todo!()
@@ -416,30 +468,36 @@ fn iter_let(
 
 // §4.2.5. Delayed evaluation ---------------------------------------------------------------------
 
-fn delay(_params: &[Ref<Datum>], _env: &mut MutableRef<Environment>) -> Result<Expression, Error> {
-    todo!()
-}
-
-fn delay_force(
-    _params: &[Ref<Datum>],
+fn delay(
+    _arguments: Vec<Ref<Datum>>,
     _env: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     todo!()
 }
 
-fn force(_params: &[Ref<Datum>], _env: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+fn delay_force(
+    _arguments: Vec<Ref<Datum>>,
+    _env: &mut MutableRef<Environment>,
+) -> Result<Expression, Error> {
+    todo!()
+}
+
+fn force(
+    _arguments: Vec<Ref<Datum>>,
+    _env: &mut MutableRef<Environment>,
+) -> Result<Expression, Error> {
     todo!()
 }
 
 fn is_promise(
-    _params: &[Ref<Datum>],
+    _arguments: Vec<Ref<Datum>>,
     _env: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     todo!()
 }
 
 fn make_promise(
-    _params: &[Ref<Datum>],
+    _arguments: Vec<Ref<Datum>>,
     _env: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     todo!()
@@ -448,14 +506,14 @@ fn make_promise(
 // §4.2.6. Dynamic bindings -----------------------------------------------------------------------
 
 fn make_parameter(
-    _params: &[Ref<Datum>],
+    _arguments: Vec<Ref<Datum>>,
     _env: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     todo!()
 }
 
 fn parameterize(
-    _params: &[Ref<Datum>],
+    _arguments: Vec<Ref<Datum>>,
     _env: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     todo!()
@@ -463,28 +521,31 @@ fn parameterize(
 
 // §4.2.7. Exception handling ---------------------------------------------------------------------
 
-fn guard(_params: &[Ref<Datum>], _env: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+fn guard(
+    _arguments: Vec<Ref<Datum>>,
+    _env: &mut MutableRef<Environment>,
+) -> Result<Expression, Error> {
     todo!()
 }
 
 // §4.2.8. Quasiquotation -------------------------------------------------------------------------
 
 pub fn quasi_quote(
-    _params: &[Ref<Datum>],
+    _arguments: Vec<Ref<Datum>>,
     _env: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     todo!()
 }
 
 pub fn unquote(
-    _params: &[Ref<Datum>],
+    _arguments: Vec<Ref<Datum>>,
     _env: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     todo!()
 }
 
 pub fn unquote_splicing(
-    _params: &[Ref<Datum>],
+    _arguments: Vec<Ref<Datum>>,
     _env: &MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     todo!()
@@ -493,7 +554,7 @@ pub fn unquote_splicing(
 // §4.2.9. Case-lambda ----------------------------------------------------------------------------
 
 fn case_lambda(
-    _params: &[Ref<Datum>],
+    _arguments: Vec<Ref<Datum>>,
     _env: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     todo!()
@@ -501,12 +562,15 @@ fn case_lambda(
 
 // §4.3.1. Binding constructs for syntactic keywords ----------------------------------------------
 
-fn let_syntax(_params: &[Ref<Datum>], _env: &MutableRef<Environment>) -> Result<Expression, Error> {
+fn let_syntax(
+    _arguments: Vec<Ref<Datum>>,
+    _env: &MutableRef<Environment>,
+) -> Result<Expression, Error> {
     todo!()
 }
 
 fn let_rec_syntax(
-    _params: &[Ref<Datum>],
+    _arguments: Vec<Ref<Datum>>,
     _env: &MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     todo!()
@@ -515,7 +579,7 @@ fn let_rec_syntax(
 // §4.3.2. Pattern language -----------------------------------------------------------------------
 
 fn syntax_rules(
-    _params: &[Ref<Datum>],
+    _arguments: Vec<Ref<Datum>>,
     _env: &MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     todo!()
@@ -524,7 +588,7 @@ fn syntax_rules(
 // §4.3.3. Signaling errors in macro transformers -------------------------------------------------
 
 fn syntax_error(
-    _params: &[Ref<Datum>],
+    _arguments: Vec<Ref<Datum>>,
     _env: &MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     todo!()
@@ -532,20 +596,69 @@ fn syntax_error(
 
 // §5.2. Import declarations ----------------------------------------------------------------------
 
-fn import(_params: &[Ref<Datum>], _env: &MutableRef<Environment>) -> Result<Expression, Error> {
+fn import(
+    _arguments: Vec<Ref<Datum>>,
+    _env: &MutableRef<Environment>,
+) -> Result<Expression, Error> {
     todo!()
 }
 
 // §5.3. Variable definitions ---------------------------------------------------------------------
 
-fn define(_params: &[Ref<Datum>], _env: &mut MutableRef<Environment>) -> Result<Expression, Error> {
-    todo!()
+fn define(
+    mut arguments: Vec<Ref<Datum>>,
+    env: &mut MutableRef<Environment>,
+) -> Result<Expression, Error> {
+    let variable_or_formals = head(&mut arguments);
+
+    if let Datum::List(list) = &*variable_or_formals {
+        // defining a function
+        let formals: Result<Vec<Identifier>, Error> = list_to_vec(list.clone())
+            .into_iter()
+            .map(|d| datum_to_id(d))
+            .collect();
+        let mut formals = formals?;
+
+        if formals.is_empty() {
+            Err(Error::from(ErrorKind::BadFormSyntax {
+                name: Identifier::from_str_unchecked(FORM_NAME_DEFINE),
+                value: variable_or_formals.to_repr_string(),
+            }))
+        } else {
+            let id = formals.remove(0);
+
+            let variadic = if list.is_proper_list() {
+                None
+            } else {
+                let last_pair = list.last();
+                Some(datum_to_id(last_pair.cdr().clone())?)
+            };
+
+            let bodies = datum_to_vec(head(&mut arguments));
+
+            let value =
+                Expression::Procedure(Procedure::new_lambda(id.clone(), formals, variadic, bodies));
+            let _ = env.borrow_mut().insert(id, value);
+            Ok(Expression::Unspecified)
+        }
+    } else if let Datum::Symbol(id) = &*variable_or_formals {
+        // defining a value
+        let value = head(&mut arguments);
+        let value = eval_datum(value, env)?;
+        let _ = env.borrow_mut().insert(id.clone(), value);
+        Ok(Expression::Unspecified)
+    } else {
+        Err(Error::from(ErrorKind::UnexpectedType {
+            expected: format!("(or {} {})", TYPE_NAME_SYMBOL, TYPE_NAME_LIST),
+            actual: Some(variable_or_formals.type_name().to_string()),
+        }))
+    }
 }
 
 // §5.3.3. Multiple-value definitions -------------------------------------------------------------
 
 fn define_values(
-    _params: &[Ref<Datum>],
+    _arguments: Vec<Ref<Datum>>,
     _env: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     todo!()
@@ -554,7 +667,7 @@ fn define_values(
 // §5.4. Syntax definitions -----------------------------------------------------------------------
 
 fn define_syntax(
-    _params: &[Ref<Datum>],
+    _arguments: Vec<Ref<Datum>>,
     _env: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     todo!()
@@ -563,7 +676,7 @@ fn define_syntax(
 // §5.6.1. Library Syntax -------------------------------------------------------------------------
 
 fn define_library(
-    _params: &[Ref<Datum>],
+    _arguments: Vec<Ref<Datum>>,
     _env: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     todo!()

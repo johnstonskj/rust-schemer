@@ -57,7 +57,7 @@ pub fn scheme_r5rs_exports() -> Exports {
 }
 
 pub fn null_environment(
-    arguments: &[Expression],
+    arguments: Vec<Expression>,
     _: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     match &arguments[0] {
@@ -72,7 +72,7 @@ pub fn null_environment(
 }
 
 fn scheme_report_environment(
-    arguments: &[Expression],
+    arguments: Vec<Expression>,
     _: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     match &arguments[0] {

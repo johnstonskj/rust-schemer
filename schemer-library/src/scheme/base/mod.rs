@@ -48,11 +48,11 @@ pub fn scheme_base_exports() -> Exports {
 // ------------------------------------------------------------------------------------------------
 
 fn features(
-    _: &[Expression],
+    _: Vec<Expression>,
     environment: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     forms::quote(
-        &[Datum::List(vector_to_list(
+        vec![Datum::List(vector_to_list(
             vec![
                 Identifier::from_str_unchecked("r7rs"),
                 Identifier::from_str_unchecked("exact-closed"),

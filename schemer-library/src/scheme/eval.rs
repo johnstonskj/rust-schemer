@@ -34,13 +34,13 @@ pub fn scheme_eval_exports() -> Exports {
 }
 
 pub fn environment(
-    _args: &[Expression],
+    _args: Vec<Expression>,
     _: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     todo!()
 }
 
-pub fn eval(args: &[Expression], _: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+pub fn eval(args: Vec<Expression>, _: &mut MutableRef<Environment>) -> Result<Expression, Error> {
     Ok(args[0].clone())
 }
 

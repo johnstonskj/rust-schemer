@@ -85,3 +85,5 @@ pub const FORM_NAME_AND: &str = "and";
 pub const FORM_NAME_OR: &str = "or";
 pub const FORM_NAME_WHEN: &str = "when";
 pub const FORM_NAME_UNLESS: &str = "unless";
+pub const FORM_NAME_BEGIN: &str = "begin";
+pub const FORM_NAME_DEFINE: &str = "define";

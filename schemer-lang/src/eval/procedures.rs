@@ -12,7 +12,11 @@ use crate::eval::callable::Callable;
 use crate::eval::{eval_datum, Environment, Expression};
 use crate::read::datum::Datum;
 
-use crate::types::{Identifier, MutableRef, Ref, SchemeValue};
+use crate::read::syntax_str::{
+    PSEUDO_SYNTAX_COLON_CHAR, PSEUDO_SYNTAX_LEFT_PROCEDURE, PSEUDO_SYNTAX_RANGE,
+    PSEUDO_SYNTAX_RIGHT_PROCEDURE,
+};
+use crate::types::{Identifier, MutableRef, Ref, SchemeRepr, SchemeValue};
 use std::fmt::{Debug, Formatter};
 
 // ------------------------------------------------------------------------------------------------
@@ -34,7 +38,7 @@ pub enum ProcedureBody {
 }
 
 pub type BuiltinFn =
-    &'static dyn Fn(&[Expression], &mut MutableRef<Environment>) -> Result<Expression, Error>;
+    &'static dyn Fn(Vec<Expression>, &mut MutableRef<Environment>) -> Result<Expression, Error>;
 
 pub const TYPE_NAME_BUILTIN_PROCEDURE: &str = "builtin-procedure";
 
@@ -59,7 +63,7 @@ impl Debug for ProcedureBody {
                 "body",
                 &match self {
                     ProcedureBody::Builtin(_) => String::from(
-                        "fn(&[Expression], &Environment) -> Result<Expression, Error>>",
+                        "fn(Vec<Expression>, &MutableRef<Environment>) -> Result<Expression, Error>>",
                     ),
                     ProcedureBody::Lambda(v) => format!("{:?}", v),
                 },
@@ -71,14 +75,13 @@ impl Debug for ProcedureBody {
 impl PartialEq for ProcedureBody {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            // TODO: can we do better?
             (Self::Builtin(lhs), Self::Builtin(rhs)) => {
                 lhs as *const dyn Fn(
-                    &[Expression],
+                    Vec<Expression>,
                     &mut MutableRef<Environment>,
                 ) -> Result<Expression, Error>
                     == rhs as *const dyn Fn(
-                        &[Expression],
+                        Vec<Expression>,
                         &mut MutableRef<Environment>,
                     ) -> Result<Expression, Error>
             }
@@ -90,6 +93,23 @@ impl PartialEq for ProcedureBody {
 
 // ------------------------------------------------------------------------------------------------
 
+impl SchemeRepr for Procedure {
+    fn to_repr_string(&self) -> String {
+        format!(
+            "{}{}{}{}{}{}{}{}{}",
+            PSEUDO_SYNTAX_LEFT_PROCEDURE,
+            self.type_name(),
+            PSEUDO_SYNTAX_COLON_CHAR,
+            self.id().to_repr_string(),
+            PSEUDO_SYNTAX_COLON_CHAR,
+            self.min_arg_count(),
+            PSEUDO_SYNTAX_RANGE,
+            self.max_arg_count().unwrap_or_default(),
+            PSEUDO_SYNTAX_RIGHT_PROCEDURE
+        )
+    }
+}
+
 impl SchemeValue for Procedure {
     fn type_name(&self) -> &'static str {
         match &self.body {
@@ -99,7 +119,7 @@ impl SchemeValue for Procedure {
     }
 }
 
-impl Callable for Procedure {
+impl Callable<Expression> for Procedure {
     fn id(&self) -> &Identifier {
         &self.id
     }
@@ -114,6 +134,43 @@ impl Callable for Procedure {
 
     fn variadic_formal_argument(&self) -> &Option<Identifier> {
         &self.variadic_formal
+    }
+
+    fn call(
+        &self,
+        arguments: Vec<Expression>,
+        environment: &mut MutableRef<Environment>,
+    ) -> Result<Expression, Error> {
+        let argument_len = arguments.len();
+        if argument_len < self.min_arg_count()
+            || (!self.has_variadic_argument() && argument_len > self.max_arg_count().unwrap())
+        {
+            return Err(Error::from(ErrorKind::ProcedureArgumentCardinality {
+                name: self.id.clone(),
+                min: self.min_arg_count(),
+                max: self.max_arg_count(),
+                given: argument_len,
+            }));
+        }
+        match &self.body {
+            ProcedureBody::Builtin(body) => (body)(arguments, environment),
+            ProcedureBody::Lambda(body) => {
+                let mut environment =
+                    Environment::new_child_named(environment.clone(), self.id().as_str());
+
+                // TODO: variadic args!!!
+
+                for (i, argument) in arguments.iter().enumerate() {
+                    environment
+                        .borrow_mut()
+                        .insert(self.formals.get(i).unwrap().clone(), argument.clone())?;
+                }
+
+                body.iter().fold(Ok(Expression::Unspecified), |_, datum| {
+                    eval_datum(datum.clone(), &mut environment)
+                })
+            }
+        }
     }
 }
 
@@ -151,41 +208,6 @@ impl Procedure {
 
     pub fn is_builtin(&self) -> bool {
         matches!(self.body, ProcedureBody::Builtin(_))
-    }
-
-    pub fn call(
-        &self,
-        arguments: &[Expression],
-        environment: &mut MutableRef<Environment>,
-    ) -> Result<Expression, Error> {
-        let argument_len = arguments.len();
-        if argument_len < self.min_arg_count()
-            || (!self.has_variadic_argument() && argument_len > self.max_arg_count().unwrap())
-        {
-            return Err(Error::from(ErrorKind::ProcedureArgumentCardinality {
-                name: self.id.clone(),
-                min: self.min_arg_count(),
-                max: self.max_arg_count(),
-                given: argument_len,
-            }));
-        }
-        match &self.body {
-            ProcedureBody::Builtin(body) => (body)(arguments, environment),
-            ProcedureBody::Lambda(body) => {
-                let mut environment =
-                    Environment::new_child_named(environment.clone(), self.id().as_str());
-
-                for (i, argument) in arguments.iter().enumerate() {
-                    environment
-                        .borrow_mut()
-                        .insert(self.formals.get(i).unwrap().clone(), argument.clone())?;
-                }
-
-                body.iter().fold(Ok(Expression::Unspecified), |_, datum| {
-                    eval_datum(datum.clone(), &mut environment)
-                })
-            }
-        }
     }
 }
 

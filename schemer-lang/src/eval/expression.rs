@@ -8,6 +8,7 @@ More detailed description, with
 */
 
 use crate::error::{Error, ErrorKind};
+use crate::eval::callable::Callable;
 use crate::eval::environment::Environment;
 use crate::eval::procedures::Procedure;
 use crate::eval::{forms, Form};
@@ -73,12 +74,10 @@ pub fn eval_datum(
         Datum::Vector(v) => Expression::Vector(v.clone()),
         Datum::List(v) => call_or_form_from_list(&v, environment)?,
         Datum::Abbreviation(a, d) => match a {
-            Abbreviation::Quote => forms::quote(&vec![d.clone()], environment)?,
-            Abbreviation::QuasiQuote => forms::quasi_quote(&vec![d.clone()], environment)?,
-            Abbreviation::Unquote => forms::unquote(&vec![d.clone()], environment)?,
-            Abbreviation::UnquoteSplicing => {
-                forms::unquote_splicing(&vec![d.clone()], environment)?
-            }
+            Abbreviation::Quote => forms::quote(vec![d.clone()], environment)?,
+            Abbreviation::QuasiQuote => forms::quasi_quote(vec![d.clone()], environment)?,
+            Abbreviation::Unquote => forms::unquote(vec![d.clone()], environment)?,
+            Abbreviation::UnquoteSplicing => forms::unquote_splicing(vec![d.clone()], environment)?,
         },
         Datum::Labeled(_, _) => {
             unreachable!()
@@ -219,11 +218,15 @@ fn call_or_form_from_list(
         if let Datum::Symbol(id) = &**from.car() {
             let variable = environment.borrow().get(&id);
             if let Some(Expression::Form(form)) = variable {
-                let form = form.clone();
-                form.call(&datum_to_vec(from.cdr().clone()), environment)
+                let arguments = if from.cdr().is_null() {
+                    Vec::default()
+                } else {
+                    datum_to_vec(from.cdr().clone())
+                };
+                form.call(arguments, environment)
             } else if let Some(Expression::Procedure(procedure)) = variable {
                 let procedure = procedure.clone();
-                procedure.call(&make_parameters(from.cdr(), environment)?, environment)
+                procedure.call(make_parameters(from.cdr(), environment)?, environment)
             } else if let Some(expr) = variable {
                 Error::from(ErrorKind::UnexpectedType {
                     expected: TYPE_NAME_SYMBOL.to_string(),
@@ -252,6 +255,7 @@ fn make_parameters(
     if from.is_null() {
         Ok(Default::default())
     } else {
+        // TODO: unwrap list, no clones
         let list = from.as_list().unwrap();
         list.iter()
             .map(|d| eval_datum(d.clone(), environment))

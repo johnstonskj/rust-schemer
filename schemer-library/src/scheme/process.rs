@@ -39,7 +39,7 @@ pub fn scheme_process_exports() -> Exports {
 }
 
 pub fn command_line(
-    _: &[Expression],
+    _: Vec<Expression>,
     _: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     Ok(Expression::Quotation(Ref::new(Datum::from(vec_to_list(
@@ -49,19 +49,19 @@ pub fn command_line(
     )))))
 }
 
-pub fn exit(_: &[Expression], _: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+pub fn exit(_: Vec<Expression>, _: &mut MutableRef<Environment>) -> Result<Expression, Error> {
     std::process::exit(0)
 }
 
 pub fn emergency_exit(
-    _: &[Expression],
+    _: Vec<Expression>,
     _: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     std::process::exit(0)
 }
 
 pub fn get_environment_variable(
-    arguments: &[Expression],
+    arguments: Vec<Expression>,
     _: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     Ok(match &arguments[0] {
@@ -74,7 +74,7 @@ pub fn get_environment_variable(
 }
 
 pub fn get_environment_variables(
-    _: &[Expression],
+    _: Vec<Expression>,
     _: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     Ok(Expression::Quotation(Ref::new(Datum::from(vec_to_list(

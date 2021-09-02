@@ -39,7 +39,7 @@ is_char_a!(is_alphanumeric);
 is_char_a!(is_control);
 
 pub fn char_name(
-    arguments: &[Expression],
+    arguments: Vec<Expression>,
     _: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     Ok(Expression::String(SchemeString::from(
