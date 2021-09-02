@@ -73,12 +73,11 @@ fn help(argument: &[Expression], _: &mut Ref<Environment>) -> Result<Expression,
 }
 
 fn inspect(argument: &[Expression], _: &mut Ref<Environment>) -> Result<Expression, Error> {
-    println!(
+    Ok(Expression::String(SchemeString::from(format!(
         "{} => {}",
         &argument[0].to_repr_string(),
         &argument[0].type_name()
-    );
-    Ok(Expression::Boolean(true.into()))
+    ))))
 }
 
 // ------------------------------------------------------------------------------------------------
