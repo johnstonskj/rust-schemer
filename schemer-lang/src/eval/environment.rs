@@ -299,7 +299,10 @@ impl Environment {
             .iter()
             .filter_map(|(id, expr)| {
                 if id.starts_with(prefix) {
-                    Some((id.to_string(), expr.to_repr_string()))
+                    Some((
+                        id.to_string(),
+                        format!("{}:{}", id.as_str(), expr.type_name()),
+                    ))
                 } else {
                     None
                 }

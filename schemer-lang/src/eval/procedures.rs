@@ -104,7 +104,9 @@ impl SchemeRepr for Procedure {
             PSEUDO_SYNTAX_COLON_CHAR,
             self.min_arg_count(),
             PSEUDO_SYNTAX_RANGE,
-            self.max_arg_count().unwrap_or_default(),
+            self.max_arg_count()
+                .map(|c| c.to_string())
+                .unwrap_or("*".to_string()),
             PSEUDO_SYNTAX_RIGHT_PROCEDURE
         )
     }
