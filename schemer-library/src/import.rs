@@ -7,12 +7,14 @@ More detailed description, with
 
 */
 
-use crate::error::{Error, ErrorKind};
-use crate::eval::Environment;
-use crate::read::syntax_str::{
+use schemer_lang::error::{Error, ErrorKind};
+use schemer_lang::eval::Environment;
+use schemer_lang::read::syntax_str::{
     SYNTAX_LEFT_PARENTHESIS_CHAR, SYNTAX_RIGHT_PARENTHESIS_CHAR, SYNTAX_SPACE, VALUE_NULL_LIST,
 };
-use crate::types::{Identifier, MutableRef, SchemeRepr};
+use schemer_lang::types::{Identifier, MutableRef, SchemeRepr};
+use schemer_lang::IMPLEMENTATION_NAME;
+use search_path::SearchPath;
 use std::ops::{Deref, DerefMut};
 use std::path::{Path, PathBuf};
 
@@ -58,25 +60,25 @@ const ID_LIB_SCHEMER_PARTS: &[&str] = &[];
 // Public Functions
 // ------------------------------------------------------------------------------------------------
 
-pub fn load_library(
-    name: LibraryName,
-    into_env: &mut MutableRef<Environment>,
-) -> Result<(), Error> {
-    if name.is_reserved() {
-        if name.is_scheme() {
-            match name.get(IDX_SECOND_PART).unwrap().as_str() {
-                "base" => into_env.borrow_mut().import(scheme_),
-            }
-        } else if name.is_srfi() {
-            todo!()
-        } else if name.is_schemer() {
-            todo!()
-        }
-        Ok(())
-    } else {
-        load_from_path(&name.to_path().unwrap(), into_env)
-    }
-}
+// pub fn load_library(
+//     name: LibraryName,
+//     into_env: &mut MutableRef<Environment>,
+// ) -> Result<(), Error> {
+//     if name.is_reserved() {
+//         if name.is_scheme() {
+//             match name.get(IDX_SECOND_PART).unwrap().as_str() {
+//                 "base" => into_env.borrow_mut().import(scheme_),
+//             }
+//         } else if name.is_srfi() {
+//             todo!()
+//         } else if name.is_schemer() {
+//             todo!()
+//         }
+//         Ok(())
+//     } else {
+//         load_from_path(&name.to_path().unwrap(), into_env)
+//     }
+// }
 
 pub fn load_from_path(
     file_path: &Path,
@@ -187,6 +189,16 @@ impl LibraryName {
     pub fn into_inner(self) -> Vec<Identifier> {
         self.0
     }
+}
+
+pub fn library_path() -> SearchPath {
+    let mut search_path = SearchPath::new_or_default("SCHEMER_LIB");
+    xdirs::data_local_dir_for(IMPLEMENTATION_NAME).map(|mut p| {
+        p.push("lib");
+        search_path.append(p)
+    });
+    search_path.append(PathBuf::from("lib"));
+    search_path
 }
 
 // ------------------------------------------------------------------------------------------------

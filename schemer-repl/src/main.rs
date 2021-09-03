@@ -1,14 +1,18 @@
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 use schemer_lang::error::{Error, ErrorKind};
-use schemer_lang::eval::eval_datum;
-use schemer_lang::types::{Ref, SchemeRepr};
+use schemer_lang::eval::{eval_datum, Expression};
+use schemer_lang::types::{Identifier, Ref, SchemeRepr, SchemeString};
 use schemer_lang::{IMPLEMENTATION_NAME, IMPLEMENTATION_VERSION};
+use schemer_library::import::library_path;
 use schemer_library::{
     make_preset_environment, PresetEnvironmentKind, DEFAULT_SCHEME_ENVIRONMENT_VERSION,
 };
 use schemer_parse::parser::parse_datum_str;
+use search_path::SearchPath;
+use std::env;
 use std::fmt::{Display, Formatter};
+use std::path::PathBuf;
 use std::str::FromStr;
 use structopt::StructOpt;
 
@@ -40,6 +44,22 @@ fn main() {
             }
         })
         .unwrap();
+
+        let _ = env.borrow_mut().insert(
+            Identifier::from_str_unchecked("schemer-library-search-path"),
+            Expression::String(SchemeString::from(library_path().to_string())),
+        );
+        let _ = env.borrow_mut().insert(
+            Identifier::from_str_unchecked("schemer-repl-history-file"),
+            Expression::String(SchemeString::from(history_file.clone())),
+        );
+        init_file_path().map(|p| {
+            let _ = env.borrow_mut().insert(
+                Identifier::from_str_unchecked("schemer-repl-init-file"),
+                Expression::String(SchemeString::from(p.to_string_lossy().to_string())),
+            );
+            println!("Loading initialization file from {:?}", p);
+        });
 
         loop {
             let result = rl.readline("> ");
@@ -117,43 +137,6 @@ struct CommandLine {
     base_environment: BaseEnvironment,
 }
 
-// fn repl_flags(args: &CommandLine) -> Pair {
-//     vector_to_list(
-//         vec![
-//             ("verbose", Datum::from(Integer::from(args.verbose))),
-//             ("use-color", Datum::from(Boolean::from(args.use_color))),
-//             (
-//                 "history-file",
-//                 Datum::from(SchemeString::from(args.history_file.to_string())),
-//             ),
-//         ]
-//         .into_iter()
-//         .map(|(k, v)| {
-//             Datum::List(Pair::cons(
-//                 Datum::Symbol(Identifier::from_str_unchecked(k)).into(),
-//                 v.into(),
-//             ))
-//         })
-//         .collect(),
-//     )
-// }
-
-// TODO: find config path, load "init.sc"
-// (
-//     "config-dir",
-//     Datum::String(SchemeString::new_unchecked(xdirs::config_dir_for(
-//         IMPLEMENTATION_NAME,
-//     ))),
-// ),
-
-// TODO: find library path
-// (
-//     "library-dir",
-//     Datum::String(SchemeString::new_unchecked(xdirs::data_local_dir_for(
-//         IMPLEMENTATION_NAME,
-//     ))),
-// ),
-
 fn parse_command_line() -> CommandLine {
     let args = CommandLine::from_args();
 
@@ -169,6 +152,14 @@ fn parse_command_line() -> CommandLine {
         .init();
 
     args
+}
+
+pub fn init_file_path() -> Option<PathBuf> {
+    let mut search_path = SearchPath::default();
+    let _ = xdirs::config_dir_for(IMPLEMENTATION_NAME).map(|p| search_path.append(p));
+    let _ = env::var("HOME").map(|p| search_path.append(PathBuf::from(p)));
+    search_path.append(PathBuf::from("."));
+    search_path.find("repl-init.sr".as_ref())
 }
 
 impl Display for BaseEnvironment {

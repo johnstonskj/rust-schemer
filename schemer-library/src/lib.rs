@@ -99,6 +99,8 @@ pub fn make_preset_environment(
 #[macro_use]
 pub mod macros;
 
+pub mod import;
+
 pub mod scheme;
 
 pub mod schemer;
