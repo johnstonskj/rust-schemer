@@ -7,14 +7,12 @@ More detailed description, with
 
  */
 
+use num::Zero;
 use schemer_lang::error::{Error, ErrorKind};
 use schemer_lang::eval::environment::Exports;
 use schemer_lang::eval::{Environment, Expression, Procedure};
-use schemer_lang::types::strings::TYPE_NAME_STRING;
-use schemer_lang::types::{Boolean, Identifier, MutableRef, SchemeValue};
-use std::fs;
-use std::ops::Deref;
-use std::path::PathBuf;
+use schemer_lang::types::numbers::TYPE_NAME_NUMBER;
+use schemer_lang::types::{Boolean, Identifier, MutableRef, Number, SchemeValue};
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
@@ -28,14 +26,39 @@ use std::path::PathBuf;
 // Public Functions
 // ------------------------------------------------------------------------------------------------
 
-pub fn scheme_file_exports() -> Exports {
+pub fn scheme_base_number_exports() -> Exports {
     let mut exports = Exports::default();
 
-    export_builtin!(exports, "delete-file" => delete_file "file-name");
-    export_builtin!(exports, "file-exists?" => file_exists "file-name");
+    export_builtin!(exports, "complex?" => is_complex "num");
+    export_builtin!(exports, "real?" => is_real "num");
+    export_builtin!(exports, "rational?" => is_rational "num");
+    export_builtin!(exports, "integer?" => is_integer "num");
+    export_builtin!(exports, "exact-integer?" => is_exact_integer "num");
+    export_builtin!(exports, "exact?" => is_exact "num");
+    export_builtin!(exports, "inexact?" => is_inexact "num");
+
+    export_builtin!(exports, "even?" => is_even "num");
+    export_builtin!(exports, "odd?" => is_odd "num");
+    export_builtin!(exports, "negative?" => is_negative "num");
+    export_builtin!(exports, "positive?" => is_positive "num");
+    export_builtin!(exports, "zero?" => is_zero "num");
 
     exports
 }
+
+is_number_a!(is_complex);
+is_number_a!(is_real);
+is_number_a!(is_rational);
+is_number_a!(is_integer);
+is_number_a!(is_exact_integer, is_integer);
+is_number_a!(is_exact);
+is_number_a!(is_inexact);
+
+is_number_a!(is_even);
+is_number_a!(is_odd);
+is_number_a!(is_positive => |v: &Number| v.is_positive().unwrap_or_default());
+is_number_a!(is_negative => |v: &Number| v.is_negative().unwrap_or_default());
+is_number_a!(is_zero);
 
 // ------------------------------------------------------------------------------------------------
 // Implementations
@@ -44,43 +67,6 @@ pub fn scheme_file_exports() -> Exports {
 // ------------------------------------------------------------------------------------------------
 // Private Functions
 // ------------------------------------------------------------------------------------------------
-
-fn delete_file(
-    arguments: Vec<Expression>,
-    _: &mut MutableRef<Environment>,
-) -> Result<Expression, Error> {
-    match &arguments[0] {
-        Expression::String(file_name) => {
-            let file = PathBuf::from(file_name.deref());
-            fs::remove_file(file)?;
-        }
-        e => {
-            return Err(Error::from(ErrorKind::UnexpectedType {
-                expected: TYPE_NAME_STRING.to_string(),
-                actual: Some(e.type_name().to_string()),
-            }))
-        }
-    }
-    Ok(Expression::Unspecified)
-}
-
-fn file_exists(
-    arguments: Vec<Expression>,
-    _: &mut MutableRef<Environment>,
-) -> Result<Expression, Error> {
-    Ok(Expression::Boolean(Boolean::from(match &arguments[0] {
-        Expression::String(file_name) => {
-            let file = PathBuf::from(file_name.deref());
-            file.exists()
-        }
-        e => {
-            return Err(Error::from(ErrorKind::UnexpectedType {
-                expected: TYPE_NAME_STRING.to_string(),
-                actual: Some(e.type_name().to_string()),
-            }))
-        }
-    })))
-}
 
 // ------------------------------------------------------------------------------------------------
 // Modules

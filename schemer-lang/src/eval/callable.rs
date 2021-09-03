@@ -46,7 +46,6 @@ where
     }
 
     fn signature(&self) -> String {
-        println!("{:?}", self);
         let formal_arguments = if self.formal_arguments().is_empty() {
             String::new()
         } else {

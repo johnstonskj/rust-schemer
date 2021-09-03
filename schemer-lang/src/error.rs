@@ -77,6 +77,9 @@ pub enum ErrorKind {
         type_name: String,
     },
     // Library ------------------------------------------------------------------------------------
+    BadLibraryName {
+        name: String,
+    },
     Read,
     File,
 }
@@ -234,6 +237,9 @@ impl Display for ErrorKind {
                         type_name,
                         name.to_repr_string()
                     )
+                }
+                ErrorKind::BadLibraryName { name } => {
+                    format!("Bad syntax for library name: {}.", name,)
                 }
             }
         )

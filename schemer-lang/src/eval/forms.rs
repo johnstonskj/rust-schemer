@@ -7,15 +7,18 @@ More detailed description, with
 
  */
 
+// TODO: implement everything!
+#![allow(dead_code)]
+
 use crate::error::{Error, ErrorKind};
 use crate::eval::callable::Callable;
 use crate::eval::environment::Exports;
 use crate::eval::{eval_datum, Environment, Expression, Procedure};
 use crate::read::datum::{datum_to_vec, Datum};
 use crate::read::syntax_str::{
-    FORM_NAME_BEGIN, FORM_NAME_DEFINE, FORM_NAME_IF, FORM_NAME_LAMBDA, FORM_NAME_LAMBDA_ALT,
-    FORM_NAME_QUOTE, FORM_NAME_SET, PSEUDO_SYNTAX_COLON_CHAR, PSEUDO_SYNTAX_LEFT_PROCEDURE,
-    PSEUDO_SYNTAX_RANGE, PSEUDO_SYNTAX_RIGHT_PROCEDURE,
+    FORM_NAME_BEGIN, FORM_NAME_DEFINE, FORM_NAME_IF, FORM_NAME_LAMBDA, FORM_NAME_QUOTE,
+    FORM_NAME_SET, PSEUDO_SYNTAX_COLON_CHAR, PSEUDO_SYNTAX_LEFT_PROCEDURE, PSEUDO_SYNTAX_RANGE,
+    PSEUDO_SYNTAX_RIGHT_PROCEDURE,
 };
 use crate::types::lists::{list_to_vec, TYPE_NAME_LIST};
 use crate::types::symbols::TYPE_NAME_SYMBOL;
@@ -94,14 +97,13 @@ pub fn standard_form_exports() -> Exports {
 
     export_standard_form!(exports, FORM_NAME_QUOTE => quote "datum");
     export_standard_form!(exports, FORM_NAME_LAMBDA => lambda "formals" ; "body");
-    export_standard_form!(exports, FORM_NAME_LAMBDA_ALT => lambda "formals" ; "body");
     export_standard_form!(exports, FORM_NAME_IF => conditional "test" "consequence" ; "alternate");
 
     export_standard_form!(exports, FORM_NAME_SET => set_bang "variable" "expression");
 
     export_standard_form!(exports, FORM_NAME_BEGIN => begin ; "expression-or-definition");
 
-    export_standard_form!(exports, FORM_NAME_DEFINE => define "variable-or-formals" "expression-or-body");
+    export_standard_form!(exports, FORM_NAME_DEFINE => define "variable-or-formals" "expression-or-body" ; "expression-or-body");
 
     exports
 }
@@ -223,6 +225,17 @@ pub fn head(arguments: &mut Vec<Ref<Datum>>) -> Ref<Datum> {
     arguments.remove(0)
 }
 
+fn datum_to_id(datum: Ref<Datum>) -> Result<Identifier, Error> {
+    if let Datum::Symbol(symbol) = &*datum {
+        Ok(symbol.clone())
+    } else {
+        Err(Error::from(ErrorKind::UnexpectedType {
+            expected: TYPE_NAME_SYMBOL.to_string(),
+            actual: Some(datum.type_name().to_string()),
+        }))
+    }
+}
+
 // §4.1.2. Literal expressions --------------------------------------------------------------------
 
 pub fn quote(
@@ -277,17 +290,6 @@ fn lambda(
     )))
 }
 
-fn datum_to_id(datum: Ref<Datum>) -> Result<Identifier, Error> {
-    if let Datum::Symbol(symbol) = &*datum {
-        Ok(symbol.clone())
-    } else {
-        Err(Error::from(ErrorKind::UnexpectedType {
-            expected: TYPE_NAME_SYMBOL.to_string(),
-            actual: Some(datum.type_name().to_string()),
-        }))
-    }
-}
-
 // §4.1.5. Conditionals ---------------------------------------------------------------------------
 
 fn conditional(
@@ -299,8 +301,8 @@ fn conditional(
     if result.is_true() {
         let consequent = head(&mut arguments);
         eval_datum(consequent, environment)
-    } else if !arguments.is_empty() {
-        let alternate = head(&mut arguments);
+    } else if arguments.len() == 2 {
+        let alternate = arguments.remove(1);
         eval_datum(alternate, environment)
     } else {
         Ok(Expression::Unspecified)
@@ -468,40 +470,7 @@ fn iter_let(
 
 // §4.2.5. Delayed evaluation ---------------------------------------------------------------------
 
-fn delay(
-    _arguments: Vec<Ref<Datum>>,
-    _env: &mut MutableRef<Environment>,
-) -> Result<Expression, Error> {
-    todo!()
-}
-
-fn delay_force(
-    _arguments: Vec<Ref<Datum>>,
-    _env: &mut MutableRef<Environment>,
-) -> Result<Expression, Error> {
-    todo!()
-}
-
-fn force(
-    _arguments: Vec<Ref<Datum>>,
-    _env: &mut MutableRef<Environment>,
-) -> Result<Expression, Error> {
-    todo!()
-}
-
-fn is_promise(
-    _arguments: Vec<Ref<Datum>>,
-    _env: &mut MutableRef<Environment>,
-) -> Result<Expression, Error> {
-    todo!()
-}
-
-fn make_promise(
-    _arguments: Vec<Ref<Datum>>,
-    _env: &mut MutableRef<Environment>,
-) -> Result<Expression, Error> {
-    todo!()
-}
+// See library::scheme::lazy
 
 // §4.2.6. Dynamic bindings -----------------------------------------------------------------------
 
@@ -634,7 +603,7 @@ fn define(
                 Some(datum_to_id(last_pair.cdr().clone())?)
             };
 
-            let bodies = datum_to_vec(head(&mut arguments));
+            let bodies = arguments;
 
             let value =
                 Expression::Procedure(Procedure::new_lambda(id.clone(), formals, variadic, bodies));

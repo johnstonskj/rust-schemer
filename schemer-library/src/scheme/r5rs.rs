@@ -7,10 +7,14 @@ More detailed description, with
 
 */
 
-use crate::scheme::base::predicates::scheme_base_predicates_exports;
+use crate::scheme::base::ports::scheme_base_ports_exports;
+use crate::scheme::base::strings::scheme_base_string_exports;
+use crate::scheme::base::types::scheme_base_type_predicates_exports;
+use crate::scheme::base::write::scheme_base_write_exports;
 use crate::scheme::chars::scheme_char_exports;
 use crate::scheme::eval::scheme_eval_exports;
 use crate::scheme::repl::scheme_repl_exports;
+use crate::scheme::write::scheme_write_exports;
 use crate::{make_preset_environment, PresetEnvironmentKind};
 use schemer_lang::error::{Error, ErrorKind};
 use schemer_lang::eval::environment::Exports;
@@ -36,8 +40,16 @@ pub fn scheme_r5rs_exports() -> Exports {
     export_builtin!(exports, "null-environment" => null_environment "version");
     export_builtin!(exports, "scheme-report-environment" => scheme_report_environment "version");
 
+    // (scheme base) ------------------------------------------------------------------------------
+
     exports.import(
-        scheme_base_predicates_exports()
+        scheme_base_ports_exports()
+            .except(&[&Identifier::from_str_unchecked("current-error-port")])
+            .clone(),
+    );
+    exports.import(scheme_base_string_exports());
+    exports.import(
+        scheme_base_type_predicates_exports()
             .except(&[
                 &Identifier::from_str_unchecked("number?"),
                 &Identifier::from_str_unchecked("bytevector?"),
@@ -45,13 +57,40 @@ pub fn scheme_r5rs_exports() -> Exports {
             ])
             .clone(),
     );
+    exports.import(
+        scheme_base_write_exports()
+            .only(&[
+                &Identifier::from_str_unchecked("newline"),
+                &Identifier::from_str_unchecked("write-char"),
+            ])
+            .clone(),
+    );
+
+    // (scheme char) ------------------------------------------------------------------------------
+
     exports.import(scheme_char_exports());
+
+    // (scheme eval) ------------------------------------------------------------------------------
+
     exports.import(
         scheme_eval_exports()
             .only(&[&Identifier::from_str_unchecked("eval")])
             .clone(),
     );
+    // (scheme repl) ------------------------------------------------------------------------------
+
     exports.import(scheme_repl_exports());
+
+    // (scheme write) -----------------------------------------------------------------------------
+
+    exports.import(
+        scheme_write_exports()
+            .only(&[
+                &Identifier::from_str_unchecked("display"),
+                &Identifier::from_str_unchecked("write"),
+            ])
+            .clone(),
+    );
 
     exports
 }

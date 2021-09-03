@@ -71,7 +71,7 @@ fn init_global_flags() -> HashMap<&'static str, RwLock<bool>> {
         (WRITE_BOOLEAN_LONG_FORM, false),
         (WRITE_CONS_LONG_FORM, false),
         (WRITE_QUOTE_LONG_FORM, false),
-        (DEBUG_SHOW_TOKEN_TREE, true),
+        (DEBUG_SHOW_TOKEN_TREE, false),
     ]
     .into_iter()
     .map(|(k, v)| (k, RwLock::new(v)))

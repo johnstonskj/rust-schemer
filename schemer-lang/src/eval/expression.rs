@@ -13,7 +13,9 @@ use crate::eval::environment::Environment;
 use crate::eval::procedures::Procedure;
 use crate::eval::{forms, Form};
 use crate::read::datum::{datum_to_vec, Abbreviation, Datum};
-use crate::read::syntax_str::{SYNTAX_ABBR_QUOTE, VALUE_NULL_LIST};
+use crate::read::syntax_str::{
+    SYNTAX_ABBR_QUOTE, SYNTAX_LEFT_PARENTHESIS_CHAR, SYNTAX_RIGHT_PARENTHESIS_CHAR, VALUE_NULL_LIST,
+};
 use crate::types::lists::TYPE_NAME_LIST;
 use crate::types::symbols::TYPE_NAME_SYMBOL;
 use crate::types::{
@@ -37,11 +39,12 @@ pub enum Expression {
     String(SchemeString),
     ByteVector(ByteVector),
     Quotation(Ref<Datum>),
-    Procedure(Procedure),
     Form(Form),
+    Procedure(Procedure),
+    List(Vec<Expression>),
+    Environment(MutableRef<Environment>),
     Null,
     Unspecified,
-    Environment(MutableRef<Environment>),
 }
 
 pub const VALUE_NAME_UNSPECIFIED: &str = "#!unspecified";
@@ -105,10 +108,19 @@ impl SchemeRepr for Expression {
             Self::ByteVector(v) => v.to_repr_string(),
             Self::Quotation(v) => format!("{}{}", SYNTAX_ABBR_QUOTE, v.to_repr_string()),
             Self::Procedure(v) => v.to_repr_string(),
+            Self::List(v) => format!(
+                "{}{}{}",
+                SYNTAX_LEFT_PARENTHESIS_CHAR,
+                v.iter()
+                    .map(|e| e.to_repr_string())
+                    .collect::<Vec<String>>()
+                    .join(" "),
+                SYNTAX_RIGHT_PARENTHESIS_CHAR
+            ),
             Self::Null => VALUE_NULL_LIST.to_string(),
             Self::Unspecified => VALUE_NAME_UNSPECIFIED.to_string(),
             Self::Environment(v) => v.borrow().to_repr_string(),
-            Expression::Form(v) => v.to_repr_string(),
+            Self::Form(v) => v.to_repr_string(),
         }
     }
 }
@@ -116,26 +128,27 @@ impl SchemeRepr for Expression {
 impl SchemeValue for Expression {
     fn type_name(&self) -> &'static str {
         match self {
-            Expression::Identifier(v) => v.type_name(),
-            Expression::Boolean(v) => v.type_name(),
-            Expression::Number(v) => v.type_name(),
-            Expression::Vector(v) => v.type_name(),
-            Expression::Character(v) => v.type_name(),
-            Expression::String(v) => v.type_name(),
-            Expression::ByteVector(v) => v.type_name(),
-            Expression::Quotation(v) => v.type_name(),
-            Expression::Procedure(v) => v.type_name(),
-            Expression::Null => TYPE_NAME_LIST,
-            Expression::Unspecified => VALUE_NAME_UNSPECIFIED,
-            Expression::Environment(v) => v.borrow().type_name(),
-            Expression::Form(v) => v.type_name(),
+            Self::Identifier(v) => v.type_name(),
+            Self::Boolean(v) => v.type_name(),
+            Self::Number(v) => v.type_name(),
+            Self::Vector(v) => v.type_name(),
+            Self::Character(v) => v.type_name(),
+            Self::String(v) => v.type_name(),
+            Self::ByteVector(v) => v.type_name(),
+            Self::Quotation(v) => v.type_name(),
+            Self::Form(v) => v.type_name(),
+            Self::Procedure(v) => v.type_name(),
+            Self::List(_) => TYPE_NAME_LIST,
+            Self::Null => TYPE_NAME_LIST,
+            Self::Unspecified => VALUE_NAME_UNSPECIFIED,
+            Self::Environment(v) => v.borrow().type_name(),
         }
     }
 }
 
 impl Expression {
     pub fn is_false(&self) -> bool {
-        if let Expression::Boolean(v) = self {
+        if let Self::Boolean(v) = self {
             v.is_false()
         } else {
             false

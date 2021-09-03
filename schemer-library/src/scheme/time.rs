@@ -21,7 +21,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 // Private Types
 // ------------------------------------------------------------------------------------------------
 
-pub const JIFFIES_PER_SECOND: i64 = 1_000_000;
+pub const JIFFIES_PER_SECOND: Integer = 1_000_000;
 
 // ------------------------------------------------------------------------------------------------
 // Public Functions

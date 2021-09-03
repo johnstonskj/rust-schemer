@@ -138,7 +138,7 @@ impl Callable<Expression> for Procedure {
 
     fn call(
         &self,
-        arguments: Vec<Expression>,
+        mut arguments: Vec<Expression>,
         environment: &mut MutableRef<Environment>,
     ) -> Result<Expression, Error> {
         let argument_len = arguments.len();
@@ -158,12 +158,22 @@ impl Callable<Expression> for Procedure {
                 let mut environment =
                     Environment::new_child_named(environment.clone(), self.id().as_str());
 
-                // TODO: variadic args!!!
-
-                for (i, argument) in arguments.iter().enumerate() {
+                for i in 0..self.min_arg_count() {
+                    let argument = arguments.remove(0);
                     environment
                         .borrow_mut()
-                        .insert(self.formals.get(i).unwrap().clone(), argument.clone())?;
+                        .insert(self.formals.get(i).unwrap().clone(), argument)?;
+                }
+
+                if self.has_variadic_argument() {
+                    environment.borrow_mut().insert(
+                        self.variadic_formal.as_ref().unwrap().clone(),
+                        if !arguments.is_empty() {
+                            Expression::List(arguments)
+                        } else {
+                            Expression::Null
+                        },
+                    )?;
                 }
 
                 body.iter().fold(Ok(Expression::Unspecified), |_, datum| {

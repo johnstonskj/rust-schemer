@@ -5,11 +5,12 @@ More detailed description, with
 
 # Example
 
-*/
+ */
 
 use schemer_lang::error::Error;
-use schemer_lang::eval::Environment;
-use schemer_lang::types::SchemeString;
+use schemer_lang::eval::environment::Exports;
+use schemer_lang::eval::{Environment, Expression, Procedure};
+use schemer_lang::types::{Identifier, MutableRef};
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
@@ -23,8 +24,12 @@ use schemer_lang::types::SchemeString;
 // Public Functions
 // ------------------------------------------------------------------------------------------------
 
-pub fn load(_file_name: SchemeString, _environment: Option<Environment>) -> Result<(), Error> {
-    todo!()
+pub fn scheme_load_exports() -> Exports {
+    let mut exports = Exports::default();
+
+    export_builtin!(exports, "load" => load "file-name");
+
+    exports
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -34,6 +39,10 @@ pub fn load(_file_name: SchemeString, _environment: Option<Environment>) -> Resu
 // ------------------------------------------------------------------------------------------------
 // Private Functions
 // ------------------------------------------------------------------------------------------------
+
+fn load(_: Vec<Expression>, _: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+    todo!()
+}
 
 // ------------------------------------------------------------------------------------------------
 // Modules

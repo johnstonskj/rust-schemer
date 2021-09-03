@@ -7,7 +7,11 @@ More detailed description, with
 
  */
 
-use crate::scheme::base::predicates::scheme_base_predicates_exports;
+use crate::scheme::base::numbers::scheme_base_number_exports;
+use crate::scheme::base::ports::scheme_base_ports_exports;
+use crate::scheme::base::strings::scheme_base_string_exports;
+use crate::scheme::base::types::scheme_base_type_predicates_exports;
+use crate::scheme::base::write::scheme_base_write_exports;
 use schemer_lang::error::Error;
 use schemer_lang::eval::environment::Exports;
 use schemer_lang::eval::{forms, Procedure};
@@ -34,7 +38,11 @@ pub fn scheme_base_exports() -> Exports {
 
     export_builtin!(exports, "features" => features);
 
-    exports.import(scheme_base_predicates_exports());
+    exports.import(scheme_base_number_exports());
+    exports.import(scheme_base_ports_exports());
+    exports.import(scheme_base_string_exports());
+    exports.import(scheme_base_type_predicates_exports());
+    exports.import(scheme_base_write_exports());
 
     exports
 }
@@ -106,4 +114,12 @@ fn byte_order() -> Identifier {
 // Modules
 // ------------------------------------------------------------------------------------------------
 
-pub mod predicates;
+pub mod numbers;
+
+pub mod ports;
+
+pub mod types;
+
+pub mod strings;
+
+pub mod write;
