@@ -8,7 +8,7 @@ A repl for the R7RS Scheme programming language in Rust.
 
 -----
 
-TBD
+This crate provides the shell for executing both scripts and interactive sessions.
 
 # Example
 

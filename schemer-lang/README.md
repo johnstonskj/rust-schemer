@@ -8,7 +8,8 @@ A pedantic implementation of the core R7RS Scheme programming language in Rust.
 
 -----
 
-TBD
+This crate provides the core language model and includes data types, environments, forms and expressions. This does not 
+include the ability to import or load external libraries as that would require the parser crate.
 
 # Example
 

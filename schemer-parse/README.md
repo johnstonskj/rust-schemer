@@ -8,7 +8,8 @@ A pedantic parser for the R7RS Scheme programming language in Rust.
 
 -----
 
-TBD
+This crate provides the parser for Scheme, currently written using [pest](https://pest.rs/). This crate depends on the 
+language crate only.
 
 # Example
 

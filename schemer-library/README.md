@@ -8,7 +8,12 @@ A pedantic implementation of the core R7RS Scheme language library in Rust.
 
 -----
 
-TBD
+This crate provides the core library and extended forms not provided in the language crate. The aim is to achieve full 
+R7RS compatibility in the library, and some SRFI.
+
+* `(scheme ...)` -- the reserved set of libraries specified by R7RS.
+* `(srfi ...)` -- the reserved namespace for SRFI implementations.
+* `(schemer ...)`. -- a reserved namespace for locally defined extensions to the R7RS library.
 
 # Example
 
