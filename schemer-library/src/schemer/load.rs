@@ -8,6 +8,8 @@ More detailed description, with
  */
 
 use crate::import::library_path;
+use crate::import::LibraryName;
+use crate::schemer::ID_LIB_SCHEMER;
 use schemer_lang::eval::environment::Exports;
 use schemer_lang::eval::Expression;
 use schemer_lang::types::{Identifier, SchemeString};
@@ -23,6 +25,13 @@ use schemer_lang::types::{Identifier, SchemeString};
 // ------------------------------------------------------------------------------------------------
 // Public Functions
 // ------------------------------------------------------------------------------------------------
+
+library_name!(
+    ID_LIB_SCHEMER_LOAD,
+    "load",
+    ID_LIB_SCHEMER,
+    schemer_load_name
+);
 
 pub fn schemer_load_exports() -> Exports {
     let mut exports = Exports::default();

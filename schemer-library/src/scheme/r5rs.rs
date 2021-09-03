@@ -7,6 +7,7 @@ More detailed description, with
 
 */
 
+use crate::import::LibraryName;
 use crate::scheme::base::ports::scheme_base_ports_exports;
 use crate::scheme::base::strings::scheme_base_string_exports;
 use crate::scheme::base::types::scheme_base_type_predicates_exports;
@@ -15,6 +16,7 @@ use crate::scheme::chars::scheme_char_exports;
 use crate::scheme::eval::scheme_eval_exports;
 use crate::scheme::repl::scheme_repl_exports;
 use crate::scheme::write::scheme_write_exports;
+use crate::scheme::ID_LIB_SCHEME;
 use crate::{make_preset_environment, PresetEnvironmentKind};
 use schemer_lang::error::{Error, ErrorKind};
 use schemer_lang::eval::environment::Exports;
@@ -33,6 +35,8 @@ use schemer_lang::types::{Identifier, MutableRef, Number, SchemeValue};
 // ------------------------------------------------------------------------------------------------
 // Public Functions
 // ------------------------------------------------------------------------------------------------
+
+library_name!(ID_LIB_SCHEME_R5RS, "r5rs", ID_LIB_SCHEME, scheme_r5rs_name);
 
 pub fn scheme_r5rs_exports() -> Exports {
     let mut exports = Exports::default();

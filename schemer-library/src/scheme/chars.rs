@@ -7,6 +7,8 @@ More detailed description, with
 
  */
 
+use crate::import::LibraryName;
+use crate::scheme::ID_LIB_SCHEME;
 use schemer_lang::error::{Error, ErrorKind};
 use schemer_lang::eval::environment::Exports;
 use schemer_lang::eval::{Environment, Expression, Procedure};
@@ -24,6 +26,13 @@ use schemer_lang::types::{Boolean, Char, Identifier, MutableRef, SchemeValue};
 // ------------------------------------------------------------------------------------------------
 // Public Functions
 // ------------------------------------------------------------------------------------------------
+
+library_name!(
+    ID_LIB_SCHEME_CHARS,
+    "chars",
+    ID_LIB_SCHEME,
+    scheme_char_name
+);
 
 pub fn scheme_char_exports() -> Exports {
     let mut exports = Exports::default();

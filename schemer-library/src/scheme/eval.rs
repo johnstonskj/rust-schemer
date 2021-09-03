@@ -7,6 +7,8 @@ More detailed description, with
 
 */
 
+use crate::import::LibraryName;
+use crate::scheme::ID_LIB_SCHEME;
 use schemer_lang::error::Error;
 use schemer_lang::eval::environment::Exports;
 use schemer_lang::eval::{Environment, Expression, Procedure};
@@ -23,6 +25,8 @@ use schemer_lang::types::{Identifier, MutableRef};
 // ------------------------------------------------------------------------------------------------
 // Public Functions
 // ------------------------------------------------------------------------------------------------
+
+library_name!(ID_LIB_SCHEME_EVAL, "eval", ID_LIB_SCHEME, scheme_eval_name);
 
 pub fn scheme_eval_exports() -> Exports {
     let mut exports = Exports::default();

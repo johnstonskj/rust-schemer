@@ -7,6 +7,9 @@ More detailed description, with
 
 */
 
+use crate::scheme::ID_LIB_SCHEME;
+use crate::schemer::ID_LIB_SCHEMER;
+use crate::srfi::ID_LIB_SRFI;
 use schemer_lang::error::{Error, ErrorKind};
 use schemer_lang::eval::Environment;
 use schemer_lang::read::syntax_str::{
@@ -30,31 +33,6 @@ pub struct LibraryName(Vec<Identifier>);
 // ------------------------------------------------------------------------------------------------
 
 const IDX_RESERVED_PART: usize = 0;
-const IDX_SECOND_PART: usize = 1;
-
-const ID_LIB_SCHEME: &str = "scheme";
-const ID_LIB_SCHEME_PARTS: &[&str] = &[
-    "base",
-    "case-lambda",
-    "char",
-    "complex",
-    "cxr",
-    "eval",
-    "inexact",
-    "lazy",
-    "load",
-    "process",
-    "repl",
-    "time",
-    "write",
-    "r5rs",
-];
-
-const ID_LIB_SRFI: &str = "srfi";
-const ID_LIB_SRFI_PARTS: &[&str] = &[];
-
-const ID_LIB_SCHEMER: &str = "schemer";
-const ID_LIB_SCHEMER_PARTS: &[&str] = &[];
 
 // ------------------------------------------------------------------------------------------------
 // Public Functions
@@ -91,6 +69,8 @@ pub fn load_from_path(
 // Implementations
 // ------------------------------------------------------------------------------------------------
 
+// ------------------------------------------------------------------------------------------------
+
 impl Deref for LibraryName {
     type Target = Vec<Identifier>;
 
@@ -121,8 +101,8 @@ impl SchemeRepr for LibraryName {
 }
 
 impl LibraryName {
-    pub fn new_scheme(name: Identifier) -> Result<Self, Error> {
-        Self::new(vec![Identifier::from_str_unchecked(ID_LIB_SCHEME), name])
+    pub(crate) fn new_unchecked(name: &[&str]) -> Self {
+        Self(name.iter().map(|id| id_from_str!(id)).collect())
     }
 
     pub fn new(name: Vec<Identifier>) -> Result<Self, Error> {
@@ -138,12 +118,8 @@ impl LibraryName {
                 name: Self(name).to_repr_string(),
             }))
         } else {
-            if (name.get(IDX_RESERVED_PART).unwrap().as_str() == ID_LIB_SCHEME
-                && !ID_LIB_SCHEME_PARTS.contains(&name.get(IDX_SECOND_PART).unwrap().as_str()))
-                || (name.get(IDX_RESERVED_PART).unwrap().as_str() == ID_LIB_SRFI
-                    && !ID_LIB_SRFI_PARTS.contains(&name.get(IDX_SECOND_PART).unwrap().as_str()))
-                || (name.get(IDX_RESERVED_PART).unwrap().as_str() == ID_LIB_SCHEMER
-                    && !ID_LIB_SCHEMER_PARTS.contains(&name.get(IDX_SECOND_PART).unwrap().as_str()))
+            if [ID_LIB_SCHEME, ID_LIB_SRFI, ID_LIB_SCHEMER]
+                .contains(&name.get(IDX_RESERVED_PART).unwrap().as_str())
             {
                 Err(Error::from(ErrorKind::BadLibraryName {
                     name: Self(name).to_repr_string(),

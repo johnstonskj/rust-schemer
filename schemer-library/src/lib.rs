@@ -115,3 +115,5 @@ pub mod import;
 pub mod scheme;
 
 pub mod schemer;
+
+pub mod srfi;

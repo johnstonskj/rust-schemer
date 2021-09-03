@@ -7,6 +7,8 @@ More detailed description, with
 
 */
 
+use crate::import::LibraryName;
+use crate::scheme::ID_LIB_SCHEME;
 use num::traits::ToPrimitive;
 use schemer_lang::error::Error;
 use schemer_lang::eval::{Environment, ExportList, Expression, Procedure};
@@ -26,6 +28,8 @@ pub const JIFFIES_PER_SECOND: Integer = 1_000_000;
 // ------------------------------------------------------------------------------------------------
 // Public Functions
 // ------------------------------------------------------------------------------------------------
+
+library_name!(ID_LIB_SCHEME_TIME, "time", ID_LIB_SCHEME, scheme_time_name);
 
 pub fn scheme_time_exports() -> ExportList {
     let mut exports = ExportList::default();

@@ -7,6 +7,7 @@ More detailed description, with
 
 */
 
+use std::cell::RefCell;
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -86,5 +87,4 @@ pub mod symbols;
 pub use symbols::Identifier;
 
 pub mod vector;
-use std::cell::RefCell;
 pub use vector::Vector;

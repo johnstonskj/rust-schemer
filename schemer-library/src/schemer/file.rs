@@ -7,6 +7,8 @@ More detailed description, with
 
  */
 
+use crate::import::LibraryName;
+use crate::schemer::ID_LIB_SCHEMER;
 use schemer_lang::error::{Error, ErrorKind};
 use schemer_lang::eval::environment::Exports;
 use schemer_lang::eval::{Environment, Expression, Procedure};
@@ -29,6 +31,13 @@ use std::path::{Component, PathBuf, Prefix};
 // ------------------------------------------------------------------------------------------------
 // Public Functions
 // ------------------------------------------------------------------------------------------------
+
+library_name!(
+    ID_LIB_SCHEMER_FILE,
+    "file",
+    ID_LIB_SCHEMER,
+    schemer_file_name
+);
 
 pub fn schemer_file_exports() -> Exports {
     let mut exports = Exports::default();

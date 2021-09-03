@@ -7,11 +7,13 @@ More detailed description, with
 
  */
 
+use crate::import::LibraryName;
 use crate::scheme::base::numbers::scheme_base_number_exports;
 use crate::scheme::base::ports::scheme_base_ports_exports;
 use crate::scheme::base::strings::scheme_base_string_exports;
 use crate::scheme::base::types::scheme_base_type_predicates_exports;
 use crate::scheme::base::write::scheme_base_write_exports;
+use crate::scheme::ID_LIB_SCHEME;
 use schemer_lang::error::Error;
 use schemer_lang::eval::environment::Exports;
 use schemer_lang::eval::{forms, Procedure};
@@ -32,6 +34,8 @@ use schemer_lang::{IMPLEMENTATION_NAME, IMPLEMENTATION_VERSION};
 // ------------------------------------------------------------------------------------------------
 // Public Functions
 // ------------------------------------------------------------------------------------------------
+
+library_name!(ID_LIB_SCHEME_BASE, "base", ID_LIB_SCHEME, scheme_base_name);
 
 pub fn scheme_base_exports() -> Exports {
     let mut exports = Exports::default();
