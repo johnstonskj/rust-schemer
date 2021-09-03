@@ -42,17 +42,12 @@ pub fn char_name(
     arguments: Vec<Expression>,
     _: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
-    Ok(Expression::String(SchemeString::from(
-        match &arguments[0] {
-            Expression::Character(v) => char_to_name(**v),
-            e => {
-                return Err(Error::from(ErrorKind::UnexpectedType {
-                    expected: TYPE_NAME_CHAR.to_string(),
-                    actual: Some(e.type_name().to_string()),
-                }))
-            }
-        },
-    )))
+    Ok(estring!(match &arguments[0] {
+        Expression::Character(v) => char_to_name(**v),
+        e => {
+            unexpected_type!(=> TYPE_NAME_CHAR, e)
+        }
+    }))
 }
 
 // ------------------------------------------------------------------------------------------------

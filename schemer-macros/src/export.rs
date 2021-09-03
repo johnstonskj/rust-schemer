@@ -1,53 +1,32 @@
-/*!
-One-line description.
-
-More detailed description, with
-
-# Example
-
-*/
-
-// use ...
-
-// ------------------------------------------------------------------------------------------------
-// Public Types
-// ------------------------------------------------------------------------------------------------
-
-// ------------------------------------------------------------------------------------------------
-// Private Types
-// ------------------------------------------------------------------------------------------------
-
-// ------------------------------------------------------------------------------------------------
-// Public Functions
-// ------------------------------------------------------------------------------------------------
-
+#[macro_export]
 macro_rules! export_standard_form {
     ($exports:expr, $id:expr => $fn_name:ident) => {
         $exports.insert(
-            Identifier::from_str_unchecked($id),
+            id_from_str!($id),
             Expression::Form(standard_form!($id => $fn_name)),
         );
     };
    ($exports:expr, $id:expr => $fn_name:ident $( $arg:expr )+) => {
         $exports.insert(
-            Identifier::from_str_unchecked($id),
+            id_from_str!($id),
             Expression::Form(standard_form!($id => $fn_name $( $arg )+)),
         );
     };
     ($exports:expr, $id:expr => $fn_name:ident ; $var:expr) => {
         $exports.insert(
-            Identifier::from_str_unchecked($id),
+            id_from_str!($id),
             Expression::Form(standard_form!($id => $fn_name ; $var)),
         );
     };
     ($exports:expr, $id:expr => $fn_name:ident $( $arg:expr )+ ; $var:expr) => {
         $exports.insert(
-            Identifier::from_str_unchecked($id),
+            id_from_str!($id),
             Expression::Form(standard_form!($id => $fn_name $( $arg )+ ; $var)),
         );
     };
 }
 
+#[macro_export]
 macro_rules! standard_form {
     ($id:expr => $fn_name:ident) => {
         Form::new($id, vec![], None, &$fn_name)
@@ -63,33 +42,35 @@ macro_rules! standard_form {
     };
 }
 
+#[macro_export]
 macro_rules! export_builtin {
     ($exports:expr, $id:expr => $fn_name:ident) => {
         $exports.insert(
-            Identifier::from_str_unchecked($id),
+            id_from_str!($id),
             Expression::Procedure(builtin!($id => $fn_name)),
         );
     };
     ($exports:expr, $id:expr => $fn_name:ident $( $arg:expr )+) => {
         $exports.insert(
-            Identifier::from_str_unchecked($id),
+            id_from_str!($id),
             Expression::Procedure(builtin!($id => $fn_name $( $arg )+)),
         );
     };
     ($exports:expr, $id:expr => $fn_name:ident ; $var:expr) => {
         $exports.insert(
-            Identifier::from_str_unchecked($id),
+            id_from_str!($id),
             Expression::Procedure(builtin!($id => $fn_name ; $var)),
         );
     };
     ($exports:expr, $id:expr => $fn_name:ident $( $arg:expr )+ ; $var:expr) => {
         $exports.insert(
-            Identifier::from_str_unchecked($id),
+            id_from_str!($id),
             Expression::Procedure(builtin!($id => $fn_name $( $arg )+ ; $var)),
         );
     };
 }
 
+#[macro_export]
 macro_rules! builtin {
     ($id:expr => $fn_name:ident) => {
         Procedure::new_builtin($id, vec![], None, &$fn_name)
@@ -105,16 +86,17 @@ macro_rules! builtin {
     };
 }
 
+#[macro_export]
 macro_rules! is_a {
     ($fn_name:ident, $expr_type:ident) => {
         pub fn $fn_name(
             arguments: Vec<Expression>,
             _: &mut MutableRef<Environment>,
         ) -> Result<Expression, Error> {
-            Ok(Expression::Boolean(Boolean::from(matches!(
+            Ok(eboolean!(matches!(
                 &arguments[0],
                 Expression::$expr_type(_)
-            ))))
+            )))
         }
     };
     ($fn_name:ident, $expr_type:ident => $closure:expr) => {
@@ -122,13 +104,13 @@ macro_rules! is_a {
             arguments: Vec<Expression>,
             _: &mut MutableRef<Environment>,
         ) -> Result<Expression, Error> {
-            Ok(Expression::Boolean(Boolean::from(
+            Ok(eboolean!(
                 if let Expression::$expr_type(v) = &*arguments[0] {
                     ($closure)(v)
                 } else {
                     false
                 },
-            )))
+            ))
         }
     };
     ($fn_name:ident, $expr_type:ident !) => {
@@ -136,14 +118,12 @@ macro_rules! is_a {
             arguments: Vec<Expression>,
             _: &mut MutableRef<Environment>,
         ) -> Result<Expression, Error> {
-            Ok(Expression::Boolean(Boolean::from(matches!(
-                &arguments[0],
-                Expression::$expr_type
-            ))))
+            Ok(eboolean!(matches!(&arguments[0], Expression::$expr_type)))
         }
     };
 }
 
+#[macro_export]
 macro_rules! is_number_a {
     ($predicate:ident) => {
         is_number_a!($predicate, $predicate);
@@ -156,6 +136,7 @@ macro_rules! is_number_a {
     };
 }
 
+#[macro_export]
 macro_rules! is_char_a {
     ($predicate:ident) => {
         is_char_a!($predicate, $predicate);
@@ -168,6 +149,7 @@ macro_rules! is_char_a {
     };
 }
 
+#[macro_export]
 macro_rules! is_list_a {
     ($predicate:ident) => {
         is_list_a!($predicate, $predicate);
@@ -180,28 +162,23 @@ macro_rules! is_list_a {
             arguments: Vec<Expression>,
             _: &mut MutableRef<Environment>,
         ) -> Result<Expression, Error> {
-            Ok(Expression::Boolean(Boolean::from(match &arguments[0] {
+            Ok(eboolean!(match &arguments[0] {
                 Expression::Quotation(v) => {
                     if let Some(pair) = v.as_list() {
                         $closure(pair)
                     } else {
-                        return Err(Error::from(ErrorKind::UnexpectedType {
-                            expected: TYPE_NAME_LIST.to_string(),
-                            actual: Some(v.type_name().to_string()),
-                        }))
+                        unexpected_type!(=> TYPE_NAME_LIST, v)
                     }
                 },
                 e => {
-                    return Err(Error::from(ErrorKind::UnexpectedType {
-                        expected: TYPE_NAME_LIST.to_string(),
-                        actual: Some(e.type_name().to_string()),
-                    }))
+                    unexpected_type!(=> TYPE_NAME_LIST, e)
                 }
-            })))
+            }))
         }
     };
 }
 
+#[macro_export]
 macro_rules! is_typed_a {
     ($predicate:ident, $expr_type:ident, $value_type:ty, $type_name:expr) => {
         is_typed_a!($predicate, $predicate, $expr_type, $value_type, $type_name);
@@ -214,27 +191,12 @@ macro_rules! is_typed_a {
             arguments: Vec<Expression>,
             _: &mut MutableRef<Environment>,
         ) -> Result<Expression, Error> {
-            Ok(Expression::Boolean(Boolean::from(match &arguments[0] {
+            Ok(eboolean!(match &arguments[0] {
                 Expression::$expr_type(v) => $closure(v),
                 e => {
-                    return Err(Error::from(ErrorKind::UnexpectedType {
-                        expected: $type_name.to_string(),
-                        actual: Some(e.type_name().to_string()),
-                    }))
+                    unexpected_type!(=> $type_name, e)
                 }
-            })))
+            }))
         }
     };
 }
-
-// ------------------------------------------------------------------------------------------------
-// Implementations
-// ------------------------------------------------------------------------------------------------
-
-// ------------------------------------------------------------------------------------------------
-// Private Functions
-// ------------------------------------------------------------------------------------------------
-
-// ------------------------------------------------------------------------------------------------
-// Modules
-// ------------------------------------------------------------------------------------------------

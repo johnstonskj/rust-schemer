@@ -7,14 +7,10 @@ More detailed description, with
 
  */
 
-use schemer_lang::error::{Error, ErrorKind};
+use crate::import::library_path;
 use schemer_lang::eval::environment::Exports;
-use schemer_lang::eval::{Environment, Expression, Procedure};
-use schemer_lang::types::strings::TYPE_NAME_STRING;
-use schemer_lang::types::{Boolean, Identifier, MutableRef, SchemeValue};
-use std::fs;
-use std::ops::Deref;
-use std::path::PathBuf;
+use schemer_lang::eval::Expression;
+use schemer_lang::types::{Identifier, SchemeString};
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
@@ -28,11 +24,13 @@ use std::path::PathBuf;
 // Public Functions
 // ------------------------------------------------------------------------------------------------
 
-pub fn scheme_file_exports() -> Exports {
+pub fn schemer_load_exports() -> Exports {
     let mut exports = Exports::default();
 
-    export_builtin!(exports, "delete-file" => delete_file "file-name");
-    export_builtin!(exports, "file-exists?" => file_exists "file-name");
+    let _ = exports.insert(
+        id_from_str!("schemer-library-search-path"),
+        estring!(library_path().to_string()),
+    );
 
     exports
 }
@@ -44,37 +42,6 @@ pub fn scheme_file_exports() -> Exports {
 // ------------------------------------------------------------------------------------------------
 // Private Functions
 // ------------------------------------------------------------------------------------------------
-
-fn delete_file(
-    arguments: Vec<Expression>,
-    _: &mut MutableRef<Environment>,
-) -> Result<Expression, Error> {
-    match &arguments[0] {
-        Expression::String(file_name) => {
-            let file = PathBuf::from(file_name.deref());
-            fs::remove_file(file)?;
-        }
-        e => {
-            unexpected_type!(=> TYPE_NAME_STRING, e)
-        }
-    }
-    Ok(Expression::Unspecified)
-}
-
-fn file_exists(
-    arguments: Vec<Expression>,
-    _: &mut MutableRef<Environment>,
-) -> Result<Expression, Error> {
-    Ok(eboolean!(match &arguments[0] {
-        Expression::String(file_name) => {
-            let file = PathBuf::from(file_name.deref());
-            file.exists()
-        }
-        e => {
-            unexpected_type!(=> TYPE_NAME_STRING, e)
-        }
-    }))
-}
 
 // ------------------------------------------------------------------------------------------------
 // Modules

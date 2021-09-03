@@ -41,10 +41,7 @@ pub fn string_length(
         match &arguments[0] {
             Expression::String(v) => v.len() as Integer,
             e => {
-                return Err(Error::from(ErrorKind::UnexpectedType {
-                    expected: TYPE_NAME_STRING.to_string(),
-                    actual: Some(e.type_name().to_string()),
-                }))
+                unexpected_type!(=> TYPE_NAME_STRING, e)
             }
         },
     ))))

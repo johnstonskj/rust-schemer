@@ -2,6 +2,7 @@
 
 members = [
     "schemer-lang",
+    "schemer-macros",
     "schemer-parse",
     "schemer-library",
     "schemer-repl"

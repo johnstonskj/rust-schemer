@@ -17,7 +17,6 @@ use schemer_lang::read::syntax_str::{
 };
 use schemer_lang::types::{Identifier, MutableRef, Ref, SchemeRepr, SchemeString};
 use schemer_lang::{IMPLEMENTATION_NAME, IMPLEMENTATION_VERSION};
-use schemer_library::import::library_path;
 use schemer_library::{
     make_preset_environment, PresetEnvironmentKind, DEFAULT_SCHEME_ENVIRONMENT_VERSION,
 };
@@ -44,7 +43,7 @@ fn main() {
             IMPLEMENTATION_NAME, IMPLEMENTATION_VERSION
         );
 
-        let mut env = make_preset_environment(match command_args.base_environment {
+        let base_env = make_preset_environment(match command_args.base_environment {
             BaseEnvironment::Interaction => PresetEnvironmentKind::Interaction,
             BaseEnvironment::R5Rs => {
                 PresetEnvironmentKind::Report(DEFAULT_SCHEME_ENVIRONMENT_VERSION)
@@ -55,6 +54,7 @@ fn main() {
             }
         })
         .unwrap();
+        let mut env = Environment::new_child_named(base_env, "*repl*");
 
         let history_file = command_args.history_file;
 
@@ -81,11 +81,6 @@ fn main() {
             println!("No previous history.");
         }
 
-        info!("'(schemer-library-search-path . \"{}\")", library_path());
-        let _ = env.borrow_mut().insert(
-            Identifier::from_str_unchecked("schemer-library-search-path"),
-            Expression::String(SchemeString::from(library_path().to_string())),
-        );
         info!("'(schemer-repl-history-file . {:?})", history_file);
         let _ = env.borrow_mut().insert(
             Identifier::from_str_unchecked("schemer-repl-history-file"),

@@ -59,26 +59,26 @@ fn is_immutable(
     arguments: Vec<Expression>,
     _: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
-    Ok(Expression::Boolean(Boolean::from(
+    Ok(eboolean!(
         if let Expression::Environment(env) = &arguments[0] {
             env.borrow().is_immutable()
         } else {
             false
-        },
-    )))
+        }
+    ))
 }
 
 fn has_parent(
     arguments: Vec<Expression>,
     _: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
-    Ok(Expression::Boolean(Boolean::from(
+    Ok(eboolean!(
         if let Expression::Environment(env) = &arguments[0] {
             env.borrow().has_parent()
         } else {
             false
-        },
-    )))
+        }
+    ))
 }
 
 fn is_bound(_: Vec<Expression>, _env: &mut MutableRef<Environment>) -> Result<Expression, Error> {

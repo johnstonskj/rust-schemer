@@ -58,72 +58,60 @@ fn is_absolute(
     arguments: Vec<Expression>,
     _: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
-    Ok(Expression::Boolean(Boolean::from(match &arguments[0] {
+    Ok(eboolean!(match &arguments[0] {
         Expression::String(file_name) => {
             let file = PathBuf::from(file_name.deref());
             file.is_absolute()
         }
         e => {
-            return Err(Error::from(ErrorKind::UnexpectedType {
-                expected: TYPE_NAME_STRING.to_string(),
-                actual: Some(e.type_name().to_string()),
-            }))
+            unexpected_type!(=> TYPE_NAME_STRING, e)
         }
-    })))
+    }))
 }
 
 fn is_relative(
     arguments: Vec<Expression>,
     _: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
-    Ok(Expression::Boolean(Boolean::from(match &arguments[0] {
+    Ok(eboolean!(match &arguments[0] {
         Expression::String(file_name) => {
             let file = PathBuf::from(file_name.deref());
             file.is_relative()
         }
         e => {
-            return Err(Error::from(ErrorKind::UnexpectedType {
-                expected: TYPE_NAME_STRING.to_string(),
-                actual: Some(e.type_name().to_string()),
-            }))
+            unexpected_type!(=> TYPE_NAME_STRING, e)
         }
-    })))
+    }))
 }
 
 fn is_dir(
     arguments: Vec<Expression>,
     _: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
-    Ok(Expression::Boolean(Boolean::from(match &arguments[0] {
+    Ok(eboolean!(match &arguments[0] {
         Expression::String(file_name) => {
             let file = PathBuf::from(file_name.deref());
             file.is_dir()
         }
         e => {
-            return Err(Error::from(ErrorKind::UnexpectedType {
-                expected: TYPE_NAME_STRING.to_string(),
-                actual: Some(e.type_name().to_string()),
-            }))
+            unexpected_type!(=> TYPE_NAME_STRING, e)
         }
-    })))
+    }))
 }
 
 fn is_file(
     arguments: Vec<Expression>,
     _: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
-    Ok(Expression::Boolean(Boolean::from(match &arguments[0] {
+    Ok(eboolean!(match &arguments[0] {
         Expression::String(file_name) => {
             let file = PathBuf::from(file_name.deref());
             file.is_file()
         }
         e => {
-            return Err(Error::from(ErrorKind::UnexpectedType {
-                expected: TYPE_NAME_STRING.to_string(),
-                actual: Some(e.type_name().to_string()),
-            }))
+            unexpected_type!(=> TYPE_NAME_STRING, e)
         }
-    })))
+    }))
 }
 
 fn extension(
@@ -139,10 +127,7 @@ fn extension(
             }
         }
         e => {
-            return Err(Error::from(ErrorKind::UnexpectedType {
-                expected: TYPE_NAME_STRING.to_string(),
-                actual: Some(e.type_name().to_string()),
-            }))
+            unexpected_type!(=> TYPE_NAME_STRING, e)
         }
     })
 }
@@ -160,10 +145,7 @@ fn file_name(
             }
         }
         e => {
-            return Err(Error::from(ErrorKind::UnexpectedType {
-                expected: TYPE_NAME_STRING.to_string(),
-                actual: Some(e.type_name().to_string()),
-            }))
+            unexpected_type!(=> TYPE_NAME_STRING, e)
         }
     })
 }
@@ -181,10 +163,7 @@ fn file_stem(
             }
         }
         e => {
-            return Err(Error::from(ErrorKind::UnexpectedType {
-                expected: TYPE_NAME_STRING.to_string(),
-                actual: Some(e.type_name().to_string()),
-            }))
+            unexpected_type!(=> TYPE_NAME_STRING, e)
         }
     })
 }
@@ -201,10 +180,7 @@ fn canonicalize_path(
                 new_file.to_string_lossy().to_string()
             }
             e => {
-                return Err(Error::from(ErrorKind::UnexpectedType {
-                    expected: TYPE_NAME_STRING.to_string(),
-                    actual: Some(e.type_name().to_string()),
-                }))
+                unexpected_type!(=> TYPE_NAME_STRING, e)
             }
         },
     )))
@@ -217,10 +193,7 @@ fn components(
     Ok(Expression::List(match &arguments[0] {
         Expression::String(file_name) => path_to_components(&PathBuf::from(file_name.deref()))?,
         e => {
-            return Err(Error::from(ErrorKind::UnexpectedType {
-                expected: TYPE_NAME_STRING.to_string(),
-                actual: Some(e.type_name().to_string()),
-            }))
+            unexpected_type!(=> TYPE_NAME_STRING, e)
         }
     }))
 }

@@ -241,9 +241,8 @@ impl Environment {
         self.immutable
     }
 
-    pub fn make_immutable(mut self) -> Self {
+    pub fn make_immutable(&mut self) {
         self.immutable = true;
-        self
     }
 
     #[cfg(feature = "todo")]
@@ -334,8 +333,7 @@ impl Exports {
     pub fn prefix(&mut self, prefix: &Identifier) -> &mut Self {
         let all_ids: Vec<Identifier> = self.keys().cloned().collect();
         for id in all_ids {
-            let new_id =
-                Identifier::from_str_unchecked(&format!("{}{}", prefix.as_str(), id.as_str()));
+            let new_id = id_from_str!(&format!("{}{}", prefix.as_str(), id.as_str()));
             self.rename_one(&id, &new_id);
         }
         self

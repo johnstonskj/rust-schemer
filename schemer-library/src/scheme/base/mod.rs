@@ -62,24 +62,24 @@ fn features(
     forms::quote(
         vec![Datum::List(vector_to_list(
             vec![
-                Identifier::from_str_unchecked("r7rs"),
-                Identifier::from_str_unchecked("exact-closed"),
-                Identifier::from_str_unchecked("exact-complex"),
-                Identifier::from_str_unchecked("ieee-float"),
-                Identifier::from_str_unchecked("full-unicode"),
-                Identifier::from_str_unchecked("ratios"),
+                id_from_str!("r7rs"),
+                id_from_str!("exact-closed"),
+                id_from_str!("exact-complex"),
+                id_from_str!("ieee-float"),
+                id_from_str!("full-unicode"),
+                id_from_str!("ratios"),
                 operating_system(),
                 architecture(),
                 byte_order(),
-                Identifier::from_str_unchecked(IMPLEMENTATION_NAME),
-                Identifier::from_str_unchecked(&format!(
+                id_from_str!(IMPLEMENTATION_NAME),
+                id_from_str!(&format!(
                     "{}-{}",
                     IMPLEMENTATION_NAME, IMPLEMENTATION_VERSION
                 )),
                 #[cfg(feature = "char-names")]
-                Identifier::from_str_unchecked("unicode-char-names"),
+                id_from_str!("unicode-char-names"),
                 #[cfg(feature = "big-num-x")]
-                Identifier::from_str_unchecked("big-numbers"),
+                id_from_str!("big-numbers"),
             ]
             .into_iter()
             .map(|symbol| Datum::from(Identifier::from(symbol)))

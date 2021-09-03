@@ -46,48 +46,6 @@ pub const TYPE_NAME_FORM: &str = "standard-form";
 // Private Types
 // ------------------------------------------------------------------------------------------------
 
-macro_rules! export_standard_form {
-    ($exports:expr, $id:expr => $fn_name:ident) => {
-        $exports.insert(
-            Identifier::from_str_unchecked($id),
-            Expression::Form(standard_form!($id => $fn_name)),
-        );
-    };
-   ($exports:expr, $id:expr => $fn_name:ident $( $arg:expr )+) => {
-        $exports.insert(
-            Identifier::from_str_unchecked($id),
-            Expression::Form(standard_form!($id => $fn_name $( $arg )+)),
-        );
-    };
-    ($exports:expr, $id:expr => $fn_name:ident ; $var:expr) => {
-        $exports.insert(
-            Identifier::from_str_unchecked($id),
-            Expression::Form(standard_form!($id => $fn_name ; $var)),
-        );
-    };
-    ($exports:expr, $id:expr => $fn_name:ident $( $arg:expr )+ ; $var:expr) => {
-        $exports.insert(
-            Identifier::from_str_unchecked($id),
-            Expression::Form(standard_form!($id => $fn_name $( $arg )+ ; $var)),
-        );
-    };
-}
-
-macro_rules! standard_form {
-    ($id:expr => $fn_name:ident) => {
-        Form::new($id, vec![], None, &$fn_name)
-    };
-    ($id:expr => $fn_name:ident $( $arg:expr )+) => {
-        Form::new($id, vec![$( $arg, )+], None, &$fn_name)
-    };
-    ($id:expr => $fn_name:ident ; $var:expr) => {
-        Form::new($id, vec![], Some($var), &$fn_name)
-    };
-    ($id:expr => $fn_name:ident $( $arg:expr )+ ; $var:expr) => {
-        Form::new($id, vec![$( $arg, )+], Some($var), &$fn_name)
-    };
-}
-
 // ------------------------------------------------------------------------------------------------
 // Public Functions
 // ------------------------------------------------------------------------------------------------

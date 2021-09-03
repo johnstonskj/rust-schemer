@@ -10,6 +10,9 @@ More detailed description, with
 #[macro_use]
 extern crate lazy_static;
 
+#[macro_use]
+extern crate schemer_macros;
+
 // ------------------------------------------------------------------------------------------------
 // Public Types
 // ------------------------------------------------------------------------------------------------

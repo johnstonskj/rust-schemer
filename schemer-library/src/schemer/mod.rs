@@ -43,4 +43,6 @@ pub mod file;
 
 pub mod lists;
 
+pub mod load;
+
 pub mod repl;

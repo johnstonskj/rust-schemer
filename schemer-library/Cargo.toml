@@ -15,6 +15,7 @@ publish = true
 [dependencies]
 lazy_static = "1.4"
 num = "0.4"
+schemer-macros = { version = "0.1", path = "../schemer-macros" }
 schemer-parse = { version = "0.1", path = "../schemer-parse" }
 schemer-lang = { version = "0.1", path = "../schemer-lang" }
 search_path = "0.1"

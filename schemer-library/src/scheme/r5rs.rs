@@ -20,7 +20,7 @@ use schemer_lang::error::{Error, ErrorKind};
 use schemer_lang::eval::environment::Exports;
 use schemer_lang::eval::{Environment, Expression, Procedure};
 use schemer_lang::types::numbers::TYPE_NAME_INTEGER;
-use schemer_lang::types::{Identifier, MutableRef, Number};
+use schemer_lang::types::{Identifier, MutableRef, Number, SchemeValue};
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
@@ -107,10 +107,7 @@ pub fn null_environment(
         Expression::Number(Number::Integer(v)) => Ok(Expression::Environment(
             make_preset_environment(PresetEnvironmentKind::Null(*v))?,
         )),
-        _ => Err(Error::from(ErrorKind::UnexpectedType {
-            expected: TYPE_NAME_INTEGER.to_string(),
-            actual: None,
-        })),
+        e => unexpected_type!(TYPE_NAME_INTEGER, e),
     }
 }
 
@@ -122,10 +119,7 @@ fn scheme_report_environment(
         Expression::Number(Number::Integer(v)) => Ok(Expression::Environment(
             make_preset_environment(PresetEnvironmentKind::Report(*v))?,
         )),
-        _ => Err(Error::from(ErrorKind::UnexpectedType {
-            expected: TYPE_NAME_INTEGER.to_string(),
-            actual: None,
-        })),
+        e => unexpected_type!(TYPE_NAME_INTEGER, e),
     }
 }
 

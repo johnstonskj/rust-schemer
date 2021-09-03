@@ -12,7 +12,7 @@ use schemer_lang::eval::environment::Exports;
 use schemer_lang::eval::{Environment, Expression, Procedure};
 use schemer_lang::read::datum::Datum;
 use schemer_lang::types::lists::vec_to_list;
-use schemer_lang::types::{Identifier, MutableRef, Pair, Ref, SchemeString};
+use schemer_lang::types::{Boolean, Identifier, MutableRef, Pair, Ref, SchemeString};
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
@@ -66,10 +66,10 @@ pub fn get_environment_variable(
 ) -> Result<Expression, Error> {
     Ok(match &arguments[0] {
         Expression::String(name) => match std::env::var(name.as_str()) {
-            Err(_) => Expression::Boolean(false.into()),
-            Ok(value) => Expression::String(SchemeString::from(value)),
+            Err(_) => efalse!(),
+            Ok(value) => estring!(value),
         },
-        _ => Expression::Boolean(false.into()),
+        _ => efalse!(),
     })
 }
 

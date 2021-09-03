@@ -41,9 +41,9 @@ pub fn current_second(
     _: Vec<Expression>,
     _: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
-    Ok(Expression::Number(Number::InexactReal(InexactReal::from(
-        SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs_f64(),
-    ))))
+    Ok(einexact_real!(SystemTime::now()
+        .duration_since(UNIX_EPOCH)?
+        .as_secs_f64()))
 }
 
 pub fn current_jiffy(
@@ -59,18 +59,14 @@ pub fn current_jiffy(
         .unwrap();
     let sub_secs = duration.as_micros().to_i64().unwrap();
 
-    Ok(Expression::Number(Number::Integer(Integer::from(
-        Integer::from(secs.checked_add(sub_secs).unwrap()),
-    ))))
+    Ok(einteger!(secs.checked_add(sub_secs).unwrap()))
 }
 
 pub fn jiffies_per_second(
     _: Vec<Expression>,
     _: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
-    Ok(Expression::Number(Number::Integer(Integer::from(
-        Integer::from(JIFFIES_PER_SECOND),
-    ))))
+    Ok(einteger!(Integer::from(JIFFIES_PER_SECOND)))
 }
 
 // ------------------------------------------------------------------------------------------------

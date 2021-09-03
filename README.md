@@ -24,6 +24,9 @@ TBD.
   * `(schemer ...)`. -- a reserved namespace for locally defined extensions to the R7RS library.
 * Crate [schemer-repl](schemer-repl/README.md) -- the shell for executing both scripts and interactive sessions.
 
+The crate [schemer-macros](schemer-macros/) is only used internally at this time, it is not published.
+
+
 # Example
 
 TBD

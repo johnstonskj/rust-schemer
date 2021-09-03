@@ -13,7 +13,7 @@ use schemer_lang::eval::environment::Exports;
 use schemer_lang::eval::forms::TYPE_NAME_FORM;
 use schemer_lang::eval::procedures::{TYPE_NAME_BUILTIN_PROCEDURE, TYPE_NAME_PROCEDURE};
 use schemer_lang::eval::{Environment, Expression, Procedure};
-use schemer_lang::types::{Identifier, MutableRef, SchemeRepr, SchemeString, SchemeValue};
+use schemer_lang::types::{Boolean, Identifier, MutableRef, SchemeRepr, SchemeString, SchemeValue};
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
@@ -50,26 +50,21 @@ fn print_current_environment(
     env: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     env.borrow().print();
-    Ok(Expression::Boolean(true.into()))
+    Ok(etrue!())
 }
 
 fn help(argument: Vec<Expression>, _: &mut MutableRef<Environment>) -> Result<Expression, Error> {
     let expr = &argument[0];
-    Ok(Expression::String(SchemeString::from(
-        if let Expression::Procedure(procedure) = expr {
-            procedure.signature()
-        } else if let Expression::Form(form) = expr {
-            form.signature()
-        } else {
-            return Err(Error::from(ErrorKind::UnexpectedType {
-                expected: format!(
-                    "(or {} {} {})",
-                    TYPE_NAME_PROCEDURE, TYPE_NAME_BUILTIN_PROCEDURE, TYPE_NAME_FORM
-                ),
-                actual: Some(expr.type_name().to_string()),
-            }));
-        },
-    )))
+    Ok(estring!(if let Expression::Procedure(procedure) = expr {
+        procedure.signature()
+    } else if let Expression::Form(form) = expr {
+        form.signature()
+    } else {
+        unexpected_type!(=> &format!(
+            "(or {} {} {})",
+            TYPE_NAME_PROCEDURE, TYPE_NAME_BUILTIN_PROCEDURE, TYPE_NAME_FORM
+        ), expr)
+    }))
 }
 
 fn inspect(

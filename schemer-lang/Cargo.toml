@@ -21,8 +21,8 @@ lazy_static = "1.4"
 num = "0.4"
 paste = "1.0"
 rust_decimal = "1.15"
+schemer-macros = { version = "0.1", path = "../schemer-macros" }
 unique_id = "0.1"
-
 unicode_names2 = { version = "0.4", optional = true }
 
 [dev-dependencies]

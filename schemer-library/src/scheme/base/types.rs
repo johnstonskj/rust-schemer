@@ -57,13 +57,11 @@ fn is_list(
     mut arguments: Vec<Expression>,
     _: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
-    Ok(Expression::Boolean(Boolean::from(
-        match arguments.remove(0) {
-            Expression::List(_) | Expression::Null => true,
-            Expression::Quotation(datum) => datum.is_list_or_null(),
-            _ => false,
-        },
-    )))
+    Ok(eboolean!(match arguments.remove(0) {
+        Expression::List(_) | Expression::Null => true,
+        Expression::Quotation(datum) => datum.is_list_or_null(),
+        _ => false,
+    }))
 }
 
 // ------------------------------------------------------------------------------------------------
