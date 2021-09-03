@@ -1,20 +1,27 @@
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
+use schemer_lang::error::{Error, ErrorKind};
 use schemer_lang::eval::eval_datum;
 use schemer_lang::types::{Ref, SchemeRepr};
 use schemer_lang::{IMPLEMENTATION_NAME, IMPLEMENTATION_VERSION};
-use schemer_library::{make_preset_environment, PresetEnvironmentKind};
+use schemer_library::{
+    make_preset_environment, PresetEnvironmentKind, DEFAULT_SCHEME_ENVIRONMENT_VERSION,
+};
 use schemer_parse::parser::parse_datum_str;
+use std::fmt::{Display, Formatter};
+use std::str::FromStr;
 use structopt::StructOpt;
 
 fn main() {
+    let command_args = parse_command_line();
+
     if isatty::stdin_isatty() {
         println!(
             "Welcome to {}, v{}.",
             IMPLEMENTATION_NAME, IMPLEMENTATION_VERSION
         );
 
-        let history_file = parse_command_line();
+        let history_file = command_args.history_file;
 
         // `()` can be used when no completer is required
         let mut rl = Editor::<()>::new();
@@ -22,7 +29,17 @@ fn main() {
             println!("No previous history.");
         }
 
-        let mut env = make_preset_environment(PresetEnvironmentKind::Interaction).unwrap();
+        let mut env = make_preset_environment(match command_args.base_environment {
+            BaseEnvironment::Interaction => PresetEnvironmentKind::Interaction,
+            BaseEnvironment::R5Rs => {
+                PresetEnvironmentKind::Report(DEFAULT_SCHEME_ENVIRONMENT_VERSION)
+            }
+            BaseEnvironment::SchemeBase => PresetEnvironmentKind::SchemeBase,
+            BaseEnvironment::Null => {
+                PresetEnvironmentKind::Null(DEFAULT_SCHEME_ENVIRONMENT_VERSION)
+            }
+        })
+        .unwrap();
 
         loop {
             let result = rl.readline("> ");
@@ -72,6 +89,14 @@ fn main() {
 // Command-Line
 // ------------------------------------------------------------------------------------------------
 
+#[derive(Copy, Clone, Debug)]
+pub enum BaseEnvironment {
+    Interaction,
+    R5Rs,
+    SchemeBase,
+    Null,
+}
+
 #[derive(Debug, StructOpt)]
 #[structopt(name = IMPLEMENTATION_NAME, about = "Simple schemer repl.")]
 struct CommandLine {
@@ -86,6 +111,10 @@ struct CommandLine {
     /// The name of the file for command history
     #[structopt(long, default_value = "schemer-history.txt")]
     history_file: String,
+
+    /// The base environment to load
+    #[structopt(long, short, default_value = "interaction")]
+    base_environment: BaseEnvironment,
 }
 
 // fn repl_flags(args: &CommandLine) -> Pair {
@@ -125,7 +154,7 @@ struct CommandLine {
 //     ))),
 // ),
 
-fn parse_command_line() -> String {
+fn parse_command_line() -> CommandLine {
     let args = CommandLine::from_args();
 
     pretty_env_logger::formatted_builder()
@@ -139,5 +168,34 @@ fn parse_command_line() -> String {
         })
         .init();
 
-    args.history_file
+    args
+}
+
+impl Display for BaseEnvironment {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::Interaction => "interaction",
+                Self::R5Rs => "r5rs",
+                Self::SchemeBase => "scheme-base",
+                Self::Null => "null",
+            }
+        )
+    }
+}
+
+impl FromStr for BaseEnvironment {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "interaction" => Ok(Self::Interaction),
+            "r5rs" => Ok(Self::R5Rs),
+            "scheme-base" => Ok(Self::SchemeBase),
+            "null" => Ok(Self::Null),
+            _ => Err(Error::from(ErrorKind::BadArguments)),
+        }
+    }
 }

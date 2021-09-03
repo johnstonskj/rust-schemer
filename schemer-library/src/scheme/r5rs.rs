@@ -92,6 +92,10 @@ pub fn scheme_r5rs_exports() -> Exports {
             .clone(),
     );
 
+    // specials while testing >>>>
+
+    // <<<< specials while testing
+
     exports
 }
 

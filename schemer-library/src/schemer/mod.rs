@@ -39,6 +39,8 @@ pub mod chars;
 
 pub mod environment;
 
+pub mod file;
+
 pub mod lists;
 
 pub mod repl;

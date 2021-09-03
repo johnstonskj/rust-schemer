@@ -10,6 +10,7 @@ More detailed description, with
 #[macro_use]
 extern crate lazy_static;
 
+use crate::scheme::base::scheme_base_exports;
 use crate::scheme::r5rs::scheme_r5rs_exports;
 use crate::schemer::environment::schemer_environment_exports;
 use crate::schemer::repl::schemer_repl_exports;
@@ -27,7 +28,10 @@ pub enum PresetEnvironmentKind {
     Interaction,
     Null(Integer),
     Report(Integer),
+    SchemeBase,
 }
+
+pub const DEFAULT_SCHEME_ENVIRONMENT_VERSION: Integer = 5;
 
 // ------------------------------------------------------------------------------------------------
 // Private Types
@@ -42,7 +46,9 @@ pub fn make_preset_environment(
 ) -> Result<MutableRef<Environment>, Error> {
     match preset {
         PresetEnvironmentKind::Interaction => {
-            let base = make_preset_environment(PresetEnvironmentKind::Report(5))?;
+            let base = make_preset_environment(PresetEnvironmentKind::Report(
+                DEFAULT_SCHEME_ENVIRONMENT_VERSION,
+            ))?;
             let repl = Environment::new_child_named(base, "*repl*");
             repl.borrow_mut().import(schemer_repl_exports())?;
             repl.borrow_mut().import(schemer_environment_exports())?;
@@ -66,6 +72,14 @@ pub fn make_preset_environment(
             let report = Environment::new_child_named(base, &format!("r{}rs", v));
             report.borrow_mut().import(scheme_r5rs_exports())?;
             Ok(report)
+        }
+        PresetEnvironmentKind::SchemeBase => {
+            let base = make_preset_environment(PresetEnvironmentKind::Null(
+                DEFAULT_SCHEME_ENVIRONMENT_VERSION,
+            ))?;
+            let scheme_base = Environment::new_child_named(base, "base");
+            scheme_base.borrow_mut().import(scheme_base_exports())?;
+            Ok(scheme_base)
         }
     }
 }

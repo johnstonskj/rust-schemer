@@ -82,6 +82,8 @@ pub enum ErrorKind {
     },
     Read,
     File,
+    // Shell --------------------------------------------------------------------------------------
+    BadArguments,
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -240,6 +242,9 @@ impl Display for ErrorKind {
                 }
                 ErrorKind::BadLibraryName { name } => {
                     format!("Bad syntax for library name: {}.", name,)
+                }
+                ErrorKind::BadArguments => {
+                    format!("Bad argument syntax.")
                 }
             }
         )
