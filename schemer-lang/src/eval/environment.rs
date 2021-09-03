@@ -7,8 +7,6 @@ More detailed description, with
 
 */
 
-use std::collections::BTreeMap;
-
 use crate::error::{Error, ErrorKind};
 use crate::eval::callable::Callable;
 use crate::eval::expression::Expression;
@@ -19,6 +17,7 @@ use crate::read::syntax_str::{
 use crate::types::new_type::NewType;
 use crate::types::{Identifier, MutableRef, Ref, SchemeRepr, SchemeValue};
 use std::cell::RefCell;
+use std::collections::{BTreeMap, BTreeSet};
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
@@ -245,6 +244,67 @@ impl Environment {
     pub fn make_immutable(mut self) -> Self {
         self.immutable = true;
         self
+    }
+
+    #[cfg(feature = "todo")]
+    pub fn bindings(&self) -> BTreeMap<&Identifier, &Expression> {
+        println!(
+            "bindings {:?}, {:?}",
+            self.name,
+            self.parent.as_ref().map(|p| p.borrow().name.clone())
+        );
+        if let Some(parent) = &self.parent {
+            let parent = parent.borrow();
+            let mut parent_bindings = parent.bindings().clone();
+            parent_bindings.extend(self.bindings());
+            parent_bindings
+        } else {
+            self.local_bindings()
+        }
+    }
+
+    pub fn local_bindings(&self) -> BTreeMap<&Identifier, &Expression> {
+        self.values.iter().collect()
+    }
+
+    #[cfg(feature = "todo")]
+    pub fn binding_names(&self) -> BTreeSet<&Identifier> {
+        if let Some(parent) = &self.parent {
+            let parent = parent.borrow();
+            let mut parent_bindings = parent.binding_names().clone();
+            parent_bindings.extend(self.local_binding_names());
+            parent_bindings
+        } else {
+            self.local_binding_names()
+        }
+    }
+
+    pub fn local_binding_names(&self) -> BTreeSet<&Identifier> {
+        self.values.keys().collect()
+    }
+
+    pub fn completions(&self, prefix: &str) -> Vec<(String, String)> {
+        if let Some(parent) = &self.parent {
+            let parent = parent.borrow();
+            let mut parent_bindings = parent.completions(prefix).clone();
+            parent_bindings.extend(self.local_completions(prefix));
+            parent_bindings
+        } else {
+            self.local_completions(prefix)
+        }
+    }
+
+    pub fn local_completions(&self, prefix: &str) -> Vec<(String, String)> {
+        self.values
+            .iter()
+            .filter_map(|(id, expr)| {
+                if id.starts_with(prefix) {
+                    Some((id.to_string(), expr.to_repr_string()))
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
 }
 

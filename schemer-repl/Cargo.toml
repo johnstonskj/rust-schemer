@@ -18,6 +18,7 @@ isatty = "0.1"
 log = "0.4"
 pretty_env_logger = "0.4"
 rustyline = "9.0"
+rustyline-derive = "0.5"
 search_path = "0.1"
 schemer-parse = { version = "0.1", path = "../schemer-parse" }
 schemer-lang = { version = "0.1", path = "../schemer-lang" }

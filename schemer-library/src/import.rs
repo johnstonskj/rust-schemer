@@ -81,8 +81,8 @@ const ID_LIB_SCHEMER_PARTS: &[&str] = &[];
 // }
 
 pub fn load_from_path(
-    file_path: &Path,
-    into_env: &mut MutableRef<Environment>,
+    _file_path: &Path,
+    _into_env: &mut MutableRef<Environment>,
 ) -> Result<(), Error> {
     Ok(())
 }
