@@ -4,11 +4,14 @@ description = "A pedantic parser for the R7RS Scheme programming language in Rus
 authors = ["Simon Johnston <johnstonskj@gmail.com>"]
 version = "0.1.0"
 edition = "2018"
-documentation = "https://docs.rs/search_path/"
-repository = "https://github.com/johnstonskj/rust-search_path.git"
+documentation = "https://docs.rs/schemer_parse/"
+repository = "https://github.com/johnstonskj/rust-schemer.git"
 license = "MIT"
 readme = "README.md"
+categories = ["compilers", "parser-implementations"]
+keywords = ["language", "lisp", "scheme", "parser"]
 publish = true
+
 
 [dependencies]
 num = "0.4"

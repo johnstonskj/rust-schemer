@@ -4,10 +4,12 @@ description = "A repl for the R7RS Scheme programming language in Rust."
 authors = ["Simon Johnston <johnstonskj@gmail.com>"]
 version = "0.1.0"
 edition = "2018"
-documentation = "https://docs.rs/search_path/"
-repository = "https://github.com/johnstonskj/rust-search_path.git"
+documentation = "https://docs.rs/schemer_repl/"
+repository = "https://github.com/johnstonskj/rust-schemer.git"
 license = "MIT"
 readme = "README.md"
+categories = ["compilers"]
+keywords = ["language", "lisp", "scheme", "interpreter", "repl", "shell"]
 publish = true
 
 [dependencies]

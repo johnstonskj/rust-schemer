@@ -4,10 +4,12 @@ description = "A pedantic implementation of the core R7RS Scheme programming lan
 authors = ["Simon Johnston <johnstonskj@gmail.com>"]
 version = "0.1.0"
 edition = "2018"
-documentation = "https://docs.rs/search_path/"
-repository = "https://github.com/johnstonskj/rust-search_path.git"
+documentation = "https://docs.rs/schemer_lang/"
+repository = "https://github.com/johnstonskj/rust-schemer.git"
 license = "MIT"
 readme = "README.md"
+categories = ["compilers"]
+keywords = ["language", "lisp", "scheme", "interpreter", "runtime"]
 publish = true
 
 [features]
