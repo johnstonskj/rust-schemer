@@ -13,8 +13,8 @@ keywords = ["language", "lisp", "scheme", "interpreter", "repl", "shell"]
 publish = true
 
 [dependencies]
+atty = "0.2"
 colored = "2.0"
-isatty = "0.2"
 log = "0.4"
 pretty_env_logger = "0.4"
 rustyline = "9.0"

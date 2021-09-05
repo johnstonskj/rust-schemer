@@ -34,27 +34,31 @@ use structopt::StructOpt;
 // Main
 // ------------------------------------------------------------------------------------------------
 
+struct Prompt<'a> {
+    pre_text: &'a str,
+    prompt_str: &'a str,
+    post_text: &'a str,
+}
+
 fn main() {
     let command_args = parse_command_line();
 
-    if isatty::stdin_isatty() {
+    let base_env = make_preset_environment(match command_args.base_environment {
+        BaseEnvironment::Interaction => PresetEnvironmentKind::Interaction,
+        BaseEnvironment::R5Rs => PresetEnvironmentKind::Report(DEFAULT_SCHEME_ENVIRONMENT_VERSION),
+        BaseEnvironment::SchemeBase => PresetEnvironmentKind::SchemeBase,
+        BaseEnvironment::Null => PresetEnvironmentKind::Null(DEFAULT_SCHEME_ENVIRONMENT_VERSION),
+    })
+    .unwrap();
+    let mut env = Environment::new_child_named(base_env, "*repl*");
+
+    if let Some(datum_str) = command_args.expression {
+        eval_datum_str(&datum_str, &mut env);
+    } else if atty::is(atty::Stream::Stdout) {
         println!(
             "Welcome to {}, v{}.",
             IMPLEMENTATION_NAME, IMPLEMENTATION_VERSION
         );
-
-        let base_env = make_preset_environment(match command_args.base_environment {
-            BaseEnvironment::Interaction => PresetEnvironmentKind::Interaction,
-            BaseEnvironment::R5Rs => {
-                PresetEnvironmentKind::Report(DEFAULT_SCHEME_ENVIRONMENT_VERSION)
-            }
-            BaseEnvironment::SchemeBase => PresetEnvironmentKind::SchemeBase,
-            BaseEnvironment::Null => {
-                PresetEnvironmentKind::Null(DEFAULT_SCHEME_ENVIRONMENT_VERSION)
-            }
-        })
-        .unwrap();
-        let mut env = Environment::new_child_named(base_env, "*repl*");
 
         let history_file = command_args.history_file;
 
@@ -86,38 +90,33 @@ fn main() {
             Identifier::from_str_unchecked("schemer-repl-history-file"),
             Expression::String(SchemeString::from(history_file.clone())),
         );
-        init_file_path().map(|p| {
-            let _ = env.borrow_mut().insert(
-                Identifier::from_str_unchecked("schemer-repl-init-file"),
-                Expression::String(SchemeString::from(p.to_string_lossy().to_string())),
-            );
-            info!("(load '(schemer-repl-init-file . {:?}))", p);
-        });
+        if !command_args.no_init_file {
+            init_file_path().map(|p| {
+                let _ = env.borrow_mut().insert(
+                    Identifier::from_str_unchecked("schemer-repl-init-file"),
+                    Expression::String(SchemeString::from(p.to_string_lossy().to_string())),
+                );
+                info!("(load '(schemer-repl-init-file . {:?}))", p);
+            });
+        }
 
-        let default_prompt = "> ";
+        let prompt = if command_args.color_off {
+            Prompt::plain("> ")
+        } else {
+            Prompt::colorized("> ")
+        };
+
         loop {
-            rl.helper_mut().expect("No helper").colored_prompt =
-                format!("\x1b[1;32m{}\x1b[0m", default_prompt);
-            let result = rl.readline(&default_prompt);
+            rl.helper_mut()
+                .expect("No command-line helper")
+                .colored_prompt = prompt.to_string();
+            let result = rl.readline(&prompt.to_string());
 
             match result {
                 Ok(line) => {
                     if !line.trim().is_empty() {
                         rl.add_history_entry(line.as_str());
-                        let result = parse_datum_str(&line);
-                        match result {
-                            Ok(datum) => match eval_datum(Ref::new(datum), &mut env) {
-                                Ok(result) => {
-                                    println!("{}", result.to_repr_string());
-                                }
-                                Err(err) => {
-                                    println!("{}", err);
-                                }
-                            },
-                            Err(e) => {
-                                eprintln!("{}", e);
-                            }
-                        }
+                        eval_datum_str(line.as_str(), &mut env);
                     }
                 }
                 Err(ReadlineError::Interrupted) => {
@@ -249,6 +248,40 @@ impl Validator for ReplHelper {
 }
 
 // ------------------------------------------------------------------------------------------------
+
+impl<'a> Default for Prompt<'a> {
+    fn default() -> Self {
+        Self::colorized(Self::DEFAULT_PROMPT_STR)
+    }
+}
+
+impl<'a> Display for Prompt<'a> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}{}{}", self.pre_text, self.prompt_str, self.post_text)
+    }
+}
+
+impl<'a> Prompt<'a> {
+    const DEFAULT_PROMPT_STR: &'static str = "> ";
+
+    pub fn colorized(prompt_str: &'a str) -> Self {
+        Self {
+            pre_text: "\x1b[1;32m",
+            prompt_str,
+            post_text: "\x1b[0m",
+        }
+    }
+
+    pub fn plain(prompt_str: &'a str) -> Self {
+        Self {
+            pre_text: "",
+            prompt_str,
+            post_text: "",
+        }
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
 // Command-Line
 // ------------------------------------------------------------------------------------------------
 
@@ -267,9 +300,13 @@ struct CommandLine {
     #[structopt(long, short = "v", parse(from_occurrences))]
     verbose: i8,
 
-    /// Colorize output where applicable
+    /// Turn off the interactive color support
     #[structopt(long)]
-    use_color: bool,
+    color_off: bool,
+
+    /// Do not read the init-file
+    #[structopt(long, short)]
+    no_init_file: bool,
 
     /// The name of the file for command history
     #[structopt(long, default_value = "schemer-history.txt")]
@@ -278,6 +315,10 @@ struct CommandLine {
     /// The base environment to load
     #[structopt(long, short, default_value = "interaction")]
     base_environment: BaseEnvironment,
+
+    /// Evaluate 'expression' only
+    #[structopt(long, short)]
+    expression: Option<String>,
 }
 
 fn parse_command_line() -> CommandLine {
@@ -304,8 +345,8 @@ impl Display for BaseEnvironment {
             "{}",
             match self {
                 Self::Interaction => "interaction",
-                Self::R5Rs => "r5rs",
-                Self::SchemeBase => "scheme-base",
+                Self::R5Rs => "r5",
+                Self::SchemeBase => "r7",
                 Self::Null => "null",
             }
         )
@@ -317,9 +358,9 @@ impl FromStr for BaseEnvironment {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "interaction" => Ok(Self::Interaction),
-            "r5rs" => Ok(Self::R5Rs),
-            "scheme-base" => Ok(Self::SchemeBase),
+            "repl" | "interaction" => Ok(Self::Interaction),
+            "5" | "r5" | "r5rs" => Ok(Self::R5Rs),
+            "7" | "r7" | "r7rs" => Ok(Self::SchemeBase),
             "null" => Ok(Self::Null),
             _ => Err(Error::from(ErrorKind::BadArguments)),
         }
@@ -329,6 +370,23 @@ impl FromStr for BaseEnvironment {
 // ------------------------------------------------------------------------------------------------
 // Private Functions
 // ------------------------------------------------------------------------------------------------
+
+fn eval_datum_str(datum_str: &str, env: &mut MutableRef<Environment>) {
+    let result = parse_datum_str(&datum_str);
+    match result {
+        Ok(datum) => match eval_datum(Ref::new(datum), env) {
+            Ok(result) => {
+                println!("{}", result.to_repr_string());
+            }
+            Err(err) => {
+                println!("{}", err);
+            }
+        },
+        Err(e) => {
+            eprintln!("{}", e);
+        }
+    }
+}
 
 fn init_file_path() -> Option<PathBuf> {
     let mut search_path = SearchPath::default();
