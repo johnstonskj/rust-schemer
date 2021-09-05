@@ -7,12 +7,12 @@ More detailed description, with
 
 */
 
-use crate::import::LibraryName;
+use crate::forms::import::LibraryName;
 use crate::scheme::base::ports::scheme_base_ports_exports;
 use crate::scheme::base::strings::scheme_base_string_exports;
 use crate::scheme::base::types::scheme_base_type_predicates_exports;
 use crate::scheme::base::write::scheme_base_write_exports;
-use crate::scheme::chars::scheme_char_exports;
+use crate::scheme::chars::scheme_chars_exports;
 use crate::scheme::eval::scheme_eval_exports;
 use crate::scheme::repl::scheme_repl_exports;
 use crate::scheme::write::scheme_write_exports;
@@ -72,7 +72,7 @@ pub fn scheme_r5rs_exports() -> Exports {
 
     // (scheme char) ------------------------------------------------------------------------------
 
-    exports.import(scheme_char_exports());
+    exports.import(scheme_chars_exports());
 
     // (scheme eval) ------------------------------------------------------------------------------
 

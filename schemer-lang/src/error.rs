@@ -80,8 +80,12 @@ pub enum ErrorKind {
     BadLibraryName {
         name: String,
     },
+    NoLibraryNamed {
+        name: String,
+    },
     Read,
     File,
+    OperatingSystem,
     // Shell --------------------------------------------------------------------------------------
     BadArguments,
 }
@@ -245,6 +249,12 @@ impl Display for ErrorKind {
                 }
                 ErrorKind::BadArguments => {
                     format!("Bad argument syntax.")
+                }
+                ErrorKind::NoLibraryNamed { name } => {
+                    format!("No library could be found with the name {}.", name)
+                }
+                ErrorKind::OperatingSystem => {
+                    format!("An error was returned from an operating system, or other platform, interface.")
                 }
             }
         )

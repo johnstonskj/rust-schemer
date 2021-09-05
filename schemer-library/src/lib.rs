@@ -13,15 +13,16 @@ extern crate lazy_static;
 #[macro_use]
 extern crate schemer_macros;
 
+use schemer_lang::error::{Error, ErrorKind};
+use schemer_lang::eval::forms::standard_form_exports;
+use schemer_lang::eval::Environment;
+use schemer_lang::types::{Integer, MutableRef};
+
 use crate::scheme::base::scheme_base_exports;
 use crate::scheme::r5rs::scheme_r5rs_exports;
 use crate::schemer::environment::schemer_environment_exports;
 use crate::schemer::load::schemer_load_exports;
 use crate::schemer::repl::schemer_repl_exports;
-use schemer_lang::error::{Error, ErrorKind};
-use schemer_lang::eval::forms::standard_form_exports;
-use schemer_lang::eval::Environment;
-use schemer_lang::types::{Integer, MutableRef};
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
@@ -110,7 +111,7 @@ pub fn make_preset_environment(
 // Modules
 // ------------------------------------------------------------------------------------------------
 
-pub mod import;
+pub mod forms;
 
 pub mod scheme;
 

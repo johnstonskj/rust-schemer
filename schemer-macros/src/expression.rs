@@ -1,4 +1,18 @@
 #[macro_export]
+macro_rules! eid_from_str {
+    ($v:expr) => {
+        Expression::Identifier(Identifier::from_str_unchecked($v))
+    };
+}
+
+#[macro_export]
+macro_rules! eid {
+    ($v:expr) => {
+        Expression::Identifier(Identifier::from($v))
+    };
+}
+
+#[macro_export]
 macro_rules! to_estring {
     ($v:expr) => {
         estring!($v.to_string())

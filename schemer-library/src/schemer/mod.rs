@@ -7,7 +7,7 @@ More detailed description, with
 
 */
 
-use crate::import::LibraryName;
+use crate::forms::import::LibraryName;
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
@@ -40,6 +40,8 @@ pub mod base;
 pub mod chars;
 
 pub mod environment;
+
+pub mod environment_inquiry;
 
 pub mod file;
 

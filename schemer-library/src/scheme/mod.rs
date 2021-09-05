@@ -7,7 +7,7 @@ More detailed description, with
 
 */
 
-use crate::import::LibraryName;
+use crate::forms::import::LibraryName;
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
@@ -57,7 +57,7 @@ pub mod lazy;
 
 pub mod load;
 
-pub mod process;
+pub mod process_context;
 
 pub mod read;
 

@@ -7,7 +7,7 @@ More detailed description, with
 
  */
 
-use crate::import::LibraryName;
+use crate::forms::import::LibraryName;
 use crate::scheme::base::numbers::scheme_base_number_exports;
 use crate::scheme::base::ports::scheme_base_ports_exports;
 use crate::scheme::base::strings::scheme_base_string_exports;
@@ -93,6 +93,8 @@ fn features(
         environment,
     )
 }
+
+// TODO: merge this and SRFI-112
 
 fn operating_system() -> Identifier {
     Identifier::from_str_unchecked(match std::env::consts::OS {

@@ -7,11 +7,12 @@ More detailed description, with
 
 */
 
-use crate::import::LibraryName;
+use crate::forms::import::LibraryName;
 use crate::scheme::ID_LIB_SCHEME;
 use num::traits::ToPrimitive;
 use schemer_lang::error::Error;
-use schemer_lang::eval::{Environment, ExportList, Expression, Procedure};
+use schemer_lang::eval::environment::Exports;
+use schemer_lang::eval::{Environment, Expression, Procedure};
 use schemer_lang::types::{Identifier, InexactReal, Integer, MutableRef, Number};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -31,8 +32,8 @@ pub const JIFFIES_PER_SECOND: Integer = 1_000_000;
 
 library_name!(ID_LIB_SCHEME_TIME, "time", ID_LIB_SCHEME, scheme_time_name);
 
-pub fn scheme_time_exports() -> ExportList {
-    let mut exports = ExportList::default();
+pub fn scheme_time_exports() -> Exports {
+    let mut exports = Exports::default();
 
     export_builtin!(exports, "current-second" => current_second);
     export_builtin!(exports, "current-jiffy" => current_jiffy);

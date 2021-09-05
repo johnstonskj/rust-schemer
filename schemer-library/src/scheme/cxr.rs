@@ -7,8 +7,9 @@ More detailed description, with
 
 */
 
-use crate::import::LibraryName;
+use crate::forms::import::LibraryName;
 use crate::scheme::ID_LIB_SCHEME;
+use schemer_lang::eval::environment::Exports;
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
@@ -23,6 +24,10 @@ use crate::scheme::ID_LIB_SCHEME;
 // ------------------------------------------------------------------------------------------------
 
 library_name!(ID_LIB_SCHEME_CXR, "cxr", ID_LIB_SCHEME, scheme_cxr_name);
+
+pub fn scheme_cxr_exports() -> Exports {
+    Exports::default()
+}
 
 // ------------------------------------------------------------------------------------------------
 // Implementations

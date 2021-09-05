@@ -525,12 +525,7 @@ fn syntax_error(
 
 // §5.2. Import declarations ----------------------------------------------------------------------
 
-fn import(
-    _arguments: Vec<Ref<Datum>>,
-    _env: &MutableRef<Environment>,
-) -> Result<Expression, Error> {
-    todo!()
-}
+// see schemer_library::forms::import
 
 // §5.3. Variable definitions ---------------------------------------------------------------------
 

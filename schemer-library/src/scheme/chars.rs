@@ -7,7 +7,7 @@ More detailed description, with
 
  */
 
-use crate::import::LibraryName;
+use crate::forms::import::LibraryName;
 use crate::scheme::ID_LIB_SCHEME;
 use schemer_lang::error::{Error, ErrorKind};
 use schemer_lang::eval::environment::Exports;
@@ -31,10 +31,10 @@ library_name!(
     ID_LIB_SCHEME_CHARS,
     "chars",
     ID_LIB_SCHEME,
-    scheme_char_name
+    scheme_chars_name
 );
 
-pub fn scheme_char_exports() -> Exports {
+pub fn scheme_chars_exports() -> Exports {
     let mut exports = Exports::default();
 
     export_builtin!(exports, "char-alphabetic?" => is_alphabetic "char");

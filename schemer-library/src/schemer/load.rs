@@ -7,8 +7,8 @@ More detailed description, with
 
  */
 
-use crate::import::library_path;
-use crate::import::LibraryName;
+use crate::forms::import::library_path;
+use crate::forms::import::LibraryName;
 use crate::schemer::ID_LIB_SCHEMER;
 use schemer_lang::eval::environment::Exports;
 use schemer_lang::eval::Expression;

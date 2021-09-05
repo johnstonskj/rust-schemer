@@ -7,7 +7,7 @@ More detailed description, with
 
 */
 
-use crate::import::LibraryName;
+use crate::forms::import::LibraryName;
 use crate::scheme::ID_LIB_SCHEME;
 use schemer_lang::error::Error;
 use schemer_lang::eval::environment::Exports;
@@ -29,13 +29,13 @@ use schemer_lang::types::{Boolean, Identifier, MutableRef, Pair, Ref, SchemeStri
 // ------------------------------------------------------------------------------------------------
 
 library_name!(
-    ID_LIB_SCHEME_PROCESS,
-    "process",
+    ID_LIB_SCHEME_PROCESS_CONTEXT,
+    "process-context",
     ID_LIB_SCHEME,
-    scheme_process_name
+    scheme_process_context_name
 );
 
-pub fn scheme_process_exports() -> Exports {
+pub fn scheme_process_context_exports() -> Exports {
     let mut exports = Exports::default();
 
     export_builtin!(exports, "command-line" => command_line);

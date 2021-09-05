@@ -5,18 +5,25 @@ More detailed description, with
 
 # Example
 
- */
+*/
 
-use crate::forms::import::LibraryName;
-use crate::scheme::ID_LIB_SCHEME;
-use schemer_lang::error::Error;
 use schemer_lang::eval::environment::Exports;
-use schemer_lang::eval::{Environment, Expression, Procedure};
-use schemer_lang::types::{Identifier, MutableRef};
+use schemer_lang::eval::expression::Expression;
+use schemer_lang::eval::forms::Form;
+use schemer_lang::read::syntax_str::FORM_NAME_IMPORT;
+use schemer_lang::types::Identifier;
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
 // ------------------------------------------------------------------------------------------------
+
+pub fn standard_form_exports() -> Exports {
+    let mut exports = Exports::default();
+
+    export_standard_form!(exports, FORM_NAME_IMPORT => import_form "import");
+
+    exports
+}
 
 // ------------------------------------------------------------------------------------------------
 // Private Types
@@ -26,16 +33,6 @@ use schemer_lang::types::{Identifier, MutableRef};
 // Public Functions
 // ------------------------------------------------------------------------------------------------
 
-library_name!(ID_LIB_SCHEME_LOAD, "load", ID_LIB_SCHEME, scheme_load_name);
-
-pub fn scheme_load_exports() -> Exports {
-    let mut exports = Exports::default();
-
-    export_builtin!(exports, "load" => load "file-name");
-
-    exports
-}
-
 // ------------------------------------------------------------------------------------------------
 // Implementations
 // ------------------------------------------------------------------------------------------------
@@ -44,10 +41,9 @@ pub fn scheme_load_exports() -> Exports {
 // Private Functions
 // ------------------------------------------------------------------------------------------------
 
-fn load(_: Vec<Expression>, _: &mut MutableRef<Environment>) -> Result<Expression, Error> {
-    todo!()
-}
-
 // ------------------------------------------------------------------------------------------------
 // Modules
 // ------------------------------------------------------------------------------------------------
+
+pub mod import;
+use import::import as import_form;
