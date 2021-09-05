@@ -11,11 +11,11 @@ use rustyline::validate::{self, MatchingBracketValidator, Validator};
 use rustyline::{Cmd, ColorMode, CompletionType, Config, Context, EditMode, Editor, KeyEvent};
 use rustyline_derive::Helper;
 use schemer_lang::error::{Error, ErrorKind};
-use schemer_lang::eval::{eval_datum, Environment, Expression};
+use schemer_lang::eval::{Environment, Evaluate, Expression};
 use schemer_lang::read::syntax_str::{
     SYNTAX_LEFT_PARENTHESIS_CHAR, SYNTAX_RIGHT_PARENTHESIS_CHAR, SYNTAX_SPACE_CHAR,
 };
-use schemer_lang::types::{Identifier, MutableRef, Ref, SchemeRepr, SchemeString};
+use schemer_lang::types::{Identifier, MutableRef, SchemeRepr, SchemeString};
 use schemer_lang::{IMPLEMENTATION_NAME, IMPLEMENTATION_VERSION};
 use schemer_library::{
     make_preset_environment, PresetEnvironmentKind, DEFAULT_SCHEME_ENVIRONMENT_VERSION,
@@ -374,7 +374,7 @@ impl FromStr for BaseEnvironment {
 fn eval_datum_str(datum_str: &str, env: &mut MutableRef<Environment>) {
     let result = parse_datum_str(&datum_str);
     match result {
-        Ok(datum) => match eval_datum(Ref::new(datum), env) {
+        Ok(datum) => match datum.eval(env) {
             Ok(result) => {
                 println!("{}", result.to_repr_string());
             }

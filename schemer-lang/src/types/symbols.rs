@@ -7,8 +7,10 @@ More detailed description, with
 
 */
 
-use crate::error::Error;
-use crate::types::{SchemeRepr, SchemeValue};
+use crate::error::{Error, ErrorKind};
+use crate::eval::expression::Evaluate;
+use crate::eval::{Environment, Expression};
+use crate::types::{MutableRef, SchemeRepr, SchemeValue};
 use std::ops::Deref;
 use std::str::FromStr;
 
@@ -33,18 +35,6 @@ pub const TYPE_NAME_SYMBOL: &str = "symbol";
 // Implementations
 // ------------------------------------------------------------------------------------------------
 
-impl SchemeRepr for Identifier {
-    fn to_repr_string(&self) -> String {
-        self.0.clone()
-    }
-}
-
-impl SchemeValue for Identifier {
-    fn type_name(&self) -> &'static str {
-        TYPE_NAME_SYMBOL
-    }
-}
-
 impl From<Identifier> for String {
     fn from(v: Identifier) -> Self {
         v.0
@@ -65,6 +55,28 @@ impl FromStr for Identifier {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         // TODO: actually check the string
         Ok(Self(s.to_string()))
+    }
+}
+
+impl SchemeRepr for Identifier {
+    fn to_repr_string(&self) -> String {
+        self.0.clone()
+    }
+}
+
+impl SchemeValue for Identifier {
+    fn type_name(&self) -> &'static str {
+        TYPE_NAME_SYMBOL
+    }
+}
+
+impl Evaluate for Identifier {
+    fn eval(&self, environment: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+        if let Some(value) = environment.borrow().get(self) {
+            Ok(value.clone())
+        } else {
+            Err(Error::from(ErrorKind::UnboundVariable { name: self.clone() }).into())
+        }
     }
 }
 

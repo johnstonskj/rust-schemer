@@ -11,7 +11,7 @@ use crate::forms::import::LibraryName;
 use crate::scheme::ID_LIB_SCHEME;
 use schemer_lang::error::Error;
 use schemer_lang::eval::environment::Exports;
-use schemer_lang::eval::{Environment, Expression, Procedure};
+use schemer_lang::eval::{Environment, Evaluate, Expression, Procedure};
 use schemer_lang::types::{Identifier, MutableRef};
 
 // ------------------------------------------------------------------------------------------------
@@ -44,8 +44,11 @@ pub fn environment(
     todo!()
 }
 
-pub fn eval(args: Vec<Expression>, _: &mut MutableRef<Environment>) -> Result<Expression, Error> {
-    Ok(args[0].clone())
+pub fn eval(
+    args: Vec<Expression>,
+    environment: &mut MutableRef<Environment>,
+) -> Result<Expression, Error> {
+    args[0].eval(environment)
 }
 
 // ------------------------------------------------------------------------------------------------

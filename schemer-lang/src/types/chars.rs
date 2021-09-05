@@ -10,7 +10,7 @@ More detailed description, with
 use crate::error::{Error, ErrorKind};
 use crate::read::syntax_str::{SYNTAX_CHAR_PREFIX, SYNTAX_HEX_CHAR_PREFIX};
 use crate::types::new_type::NewType;
-use crate::types::{SchemeRepr, SchemeValue};
+use crate::types::{MutableRef, SchemeRepr, SchemeValue};
 pub use char_names::name_to_char;
 use std::convert::TryFrom;
 
@@ -78,25 +78,6 @@ fn is_valid_char(cp: u32) -> bool {
 
 // ------------------------------------------------------------------------------------------------
 
-impl SchemeRepr for Char {
-    fn to_repr_string(&self) -> String {
-        if self.is_ascii() && !self.is_ascii_control() {
-            format!("{}{}", SYNTAX_CHAR_PREFIX, **self)
-        } else if self.is_alphanumeric() {
-            format!("{}{}", SYNTAX_CHAR_PREFIX, **self)
-        } else if let Some(name) = char_names::char_to_name(**self) {
-            name
-        } else {
-            let escaped = self.escape_unicode().to_string();
-            format!(
-                "{}{}",
-                SYNTAX_HEX_CHAR_PREFIX,
-                &escaped[3..escaped.len() - 1].to_uppercase()
-            )
-        }
-    }
-}
-
 impl TryFrom<u32> for Char {
     type Error = Error;
 
@@ -120,7 +101,32 @@ impl TryFrom<u32> for Char {
     }
 }
 
+impl SchemeRepr for Char {
+    fn to_repr_string(&self) -> String {
+        if self.is_ascii() && !self.is_ascii_control() {
+            format!("{}{}", SYNTAX_CHAR_PREFIX, **self)
+        } else if self.is_alphanumeric() {
+            format!("{}{}", SYNTAX_CHAR_PREFIX, **self)
+        } else if let Some(name) = char_names::char_to_name(**self) {
+            name
+        } else {
+            let escaped = self.escape_unicode().to_string();
+            format!(
+                "{}{}",
+                SYNTAX_HEX_CHAR_PREFIX,
+                &escaped[3..escaped.len() - 1].to_uppercase()
+            )
+        }
+    }
+}
+
 scheme_value!(Char, TYPE_NAME_CHAR, "char");
+
+impl Evaluate for Char {
+    fn eval(&self, _: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+        Ok(Expression::Character(self.clone()))
+    }
+}
 
 // ------------------------------------------------------------------------------------------------
 // Private Functions
@@ -167,6 +173,8 @@ mod char_names {
     }
 }
 
+use crate::eval::expression::Evaluate;
+use crate::eval::{Environment, Expression};
 #[cfg(not(feature = "char-names"))]
 use default_char_names as char_names;
 

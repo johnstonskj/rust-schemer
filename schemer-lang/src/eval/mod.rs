@@ -34,10 +34,10 @@ More detailed description, with
 pub mod callable;
 
 pub mod environment;
-pub use environment::{Environment, ExportList};
+pub use environment::{Environment, ExportList, Exports};
 
 pub mod expression;
-pub use expression::{eval_datum, Expression};
+pub use expression::{Evaluate, Expression};
 
 pub mod forms;
 pub use forms::Form;

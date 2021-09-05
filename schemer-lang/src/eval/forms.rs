@@ -13,7 +13,7 @@ More detailed description, with
 use crate::error::{Error, ErrorKind};
 use crate::eval::callable::Callable;
 use crate::eval::environment::Exports;
-use crate::eval::{eval_datum, Environment, Expression, Procedure};
+use crate::eval::{Environment, Evaluate, Expression, Procedure};
 use crate::read::datum::{datum_to_vec, Datum};
 use crate::read::syntax_str::{
     FORM_NAME_BEGIN, FORM_NAME_DEFINE, FORM_NAME_IF, FORM_NAME_LAMBDA, FORM_NAME_QUOTE,
@@ -257,13 +257,13 @@ fn conditional(
     environment: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
     let test = head(&mut arguments);
-    let result = eval_datum(test, environment)?;
+    let result = test.eval(environment)?;
     if result.is_true() {
         let consequent = head(&mut arguments);
-        eval_datum(consequent, environment)
+        consequent.eval(environment)
     } else if arguments.len() == 2 {
         let alternate = arguments.remove(1);
-        eval_datum(alternate, environment)
+        alternate.eval(environment)
     } else {
         Ok(Expression::Unspecified)
     }
@@ -277,7 +277,7 @@ fn set_bang(
 ) -> Result<Expression, Error> {
     let variable = head(&mut arguments);
     if let Datum::Symbol(id) = &*variable {
-        let expr = eval_datum(head(&mut arguments), env)?;
+        let expr = head(&mut arguments).eval(env)?;
         env.borrow_mut().update(id.clone(), expr)?;
         Ok(Expression::Unspecified)
     } else {
@@ -408,7 +408,7 @@ fn begin(
     arguments
         .into_iter()
         .fold(Ok(Expression::Unspecified), |_, datum| {
-            eval_datum(datum, environment)
+            datum.eval(environment)
         })
 }
 
@@ -568,7 +568,7 @@ fn define(
     } else if let Datum::Symbol(id) = &*variable_or_formals {
         // defining a value
         let value = head(&mut arguments);
-        let value = eval_datum(value, env)?;
+        let value = value.eval(env)?;
         let _ = env.borrow_mut().insert(id.clone(), value);
         Ok(Expression::Unspecified)
     } else {

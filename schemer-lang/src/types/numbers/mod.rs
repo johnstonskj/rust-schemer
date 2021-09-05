@@ -25,7 +25,7 @@ use crate::read::syntax_str::{
     EMPTY_STR, SYNTAX_MATH_COMPLEX_CHAR, SYNTAX_MATH_MINUS, SYNTAX_MATH_MINUS_CHAR,
     SYNTAX_MATH_PLUS, SYNTAX_MATH_PLUS_CHAR,
 };
-use crate::types::{SchemeRepr, SchemeValue};
+use crate::types::{MutableRef, SchemeRepr, SchemeValue};
 use num::complex::Complex;
 use num::rational::Ratio;
 use num::traits::{Num, Signed, ToPrimitive, Zero};
@@ -85,46 +85,6 @@ pub enum Number {
 pub trait SchemeNum: Num + Sized + Display + FromStr {}
 
 // ------------------------------------------------------------------------------------------------
-// Private Macros
-// ------------------------------------------------------------------------------------------------
-
-macro_rules! num_op {
-    ($number:expr, $op_name:ident, $rhs:ident) => {
-        match $rhs {
-            Number::ExactComplex(rhs) => $number.$op_name(rhs).into(),
-            Number::InexactComplex(rhs) => $number.$op_name(rhs).into(),
-            Number::ExactReal(rhs) => $number.$op_name(rhs).into(),
-            Number::InexactReal(rhs) => $number.$op_name(rhs).into(),
-            Number::Rational(rhs) => $number.$op_name(rhs).into(),
-            Number::Integer(rhs) => $number.$op_name(rhs).into(),
-        }
-    };
-    ($number:expr, $op_name:ident) => {
-        match $number {
-            Number::ExactComplex(v) => v.$op_name().into(),
-            Number::InexactComplex(v) => v.$op_name().into(),
-            Number::ExactReal(v) => v.$op_name().into(),
-            Number::InexactReal(v) => v.$op_name().into(),
-            Number::Rational(v) => v.$op_name().into(),
-            Number::Integer(v) => v.$op_name().into(),
-        }
-    };
-}
-
-macro_rules! num_match_fn {
-    ($number:expr, $fn_name:ident) => {
-        match $number {
-            Number::ExactComplex(v) => v.$fn_name(),
-            Number::InexactComplex(v) => v.$fn_name(),
-            Number::ExactReal(v) => v.$fn_name(),
-            Number::InexactReal(v) => v.$fn_name(),
-            Number::Rational(v) => v.$fn_name(),
-            Number::Integer(v) => v.$fn_name(),
-        }
-    };
-}
-
-// ------------------------------------------------------------------------------------------------
 // Private Types
 // ------------------------------------------------------------------------------------------------
 
@@ -138,21 +98,27 @@ macro_rules! num_match_fn {
 
 impl SchemeNum for Integer {}
 
-impl SchemeNum for Rational {}
-
-impl SchemeNum for ExactReal {}
-
-impl SchemeNum for InexactReal {}
-
-impl SchemeNum for ExactComplex {}
-
-impl SchemeNum for InexactComplex {}
-
 impl SchemeRepr for Integer {
     fn to_repr_string(&self) -> String {
         self.to_string()
     }
 }
+
+impl SchemeValue for Integer {
+    fn type_name(&self) -> &'static str {
+        TYPE_NAME_INTEGER
+    }
+}
+
+impl Evaluate for Integer {
+    fn eval(&self, _: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+        Ok(Expression::Number(Number::from(self.clone())))
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+
+impl SchemeNum for Rational {}
 
 impl SchemeRepr for Rational {
     fn to_repr_string(&self) -> String {
@@ -160,11 +126,43 @@ impl SchemeRepr for Rational {
     }
 }
 
+impl SchemeValue for Rational {
+    fn type_name(&self) -> &'static str {
+        TYPE_NAME_RATIONAL
+    }
+}
+
+impl Evaluate for Rational {
+    fn eval(&self, _: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+        Ok(Expression::Number(Number::from(self.clone())))
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+
+impl SchemeNum for ExactReal {}
+
 impl SchemeRepr for ExactReal {
     fn to_repr_string(&self) -> String {
         self.to_string()
     }
 }
+
+impl SchemeValue for ExactReal {
+    fn type_name(&self) -> &'static str {
+        TYPE_NAME_EXACT_REAL
+    }
+}
+
+impl Evaluate for ExactReal {
+    fn eval(&self, _: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+        Ok(Expression::Number(Number::from(self.clone())))
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+
+impl SchemeNum for InexactReal {}
 
 impl SchemeRepr for InexactReal {
     fn to_repr_string(&self) -> String {
@@ -181,6 +179,22 @@ impl SchemeRepr for InexactReal {
         }
     }
 }
+
+impl SchemeValue for InexactReal {
+    fn type_name(&self) -> &'static str {
+        TYPE_NAME_INEXACT_REAL
+    }
+}
+
+impl Evaluate for InexactReal {
+    fn eval(&self, _: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+        Ok(Expression::Number(Number::from(self.clone())))
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+
+impl SchemeNum for ExactComplex {}
 
 impl SchemeRepr for ExactComplex {
     fn to_repr_string(&self) -> String {
@@ -211,6 +225,22 @@ impl SchemeRepr for ExactComplex {
     }
 }
 
+impl SchemeValue for ExactComplex {
+    fn type_name(&self) -> &'static str {
+        TYPE_NAME_EXACT_COMPLEX
+    }
+}
+
+impl Evaluate for ExactComplex {
+    fn eval(&self, _: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+        Ok(Expression::Number(Number::from(self.clone())))
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+
+impl SchemeNum for InexactComplex {}
+
 impl SchemeRepr for InexactComplex {
     fn to_repr_string(&self) -> String {
         format!(
@@ -235,6 +265,20 @@ impl SchemeRepr for InexactComplex {
     }
 }
 
+impl SchemeValue for InexactComplex {
+    fn type_name(&self) -> &'static str {
+        TYPE_NAME_INEXACT_COMPLEX
+    }
+}
+
+impl Evaluate for InexactComplex {
+    fn eval(&self, _: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+        Ok(Expression::Number(Number::from(self.clone())))
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+
 impl SchemeRepr for Number {
     fn to_repr_string(&self) -> String {
         num_match_fn!(self, to_repr_string)
@@ -243,14 +287,13 @@ impl SchemeRepr for Number {
 
 impl SchemeValue for Number {
     fn type_name(&self) -> &'static str {
-        match self {
-            Number::ExactComplex(_) => TYPE_NAME_EXACT_COMPLEX,
-            Number::InexactComplex(_) => TYPE_NAME_INEXACT_COMPLEX,
-            Number::ExactReal(_) => TYPE_NAME_EXACT_REAL,
-            Number::InexactReal(_) => TYPE_NAME_INEXACT_REAL,
-            Number::Rational(_) => TYPE_NAME_RATIONAL,
-            Number::Integer(_) => TYPE_NAME_INTEGER,
-        }
+        num_match_fn!(self, type_name)
+    }
+}
+
+impl Evaluate for Number {
+    fn eval(&self, environment: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+        num_match_fn!(self, eval, environment)
     }
 }
 
@@ -491,6 +534,9 @@ impl Number {
 pub mod conv;
 
 mod inf_nan;
+use crate::error::Error;
+use crate::eval::expression::Evaluate;
+use crate::eval::{Environment, Expression};
 pub use inf_nan::InfNan;
 
 pub mod op;

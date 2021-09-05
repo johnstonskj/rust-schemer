@@ -7,12 +7,15 @@ More detailed description, with
 
 */
 
+use crate::error::Error;
+use crate::eval::expression::Evaluate;
+use crate::eval::{Environment, Expression};
 use crate::parameters::{get_global_flag, WRITE_BOOLEAN_LONG_FORM};
 use crate::read::syntax_str::{
     VALUE_BOOLEAN_FALSE, VALUE_BOOLEAN_FALSE_SHORT, VALUE_BOOLEAN_TRUE, VALUE_BOOLEAN_TRUE_SHORT,
 };
 use crate::types::new_type::NewType;
-use crate::types::{SchemeRepr, SchemeValue};
+use crate::types::{MutableRef, SchemeRepr, SchemeValue};
 use std::ops::Deref;
 
 // ------------------------------------------------------------------------------------------------
@@ -53,6 +56,12 @@ impl SchemeRepr for Boolean {
 }
 
 scheme_value!(Boolean, TYPE_NAME_BOOLEAN, "boolean");
+
+impl Evaluate for Boolean {
+    fn eval(&self, _: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+        Ok(Expression::Boolean(self.clone()))
+    }
+}
 
 impl Boolean {
     pub fn is_true(&self) -> bool {

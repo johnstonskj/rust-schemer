@@ -9,7 +9,7 @@ More detailed description, with
 
 use crate::error::{Error, ErrorKind};
 use crate::eval::callable::Callable;
-use crate::eval::{eval_datum, Environment, Expression};
+use crate::eval::{Environment, Evaluate, Expression};
 use crate::read::datum::Datum;
 
 use crate::read::syntax_str::{
@@ -179,7 +179,7 @@ impl Callable<Expression> for Procedure {
                 }
 
                 body.iter().fold(Ok(Expression::Unspecified), |_, datum| {
-                    eval_datum(datum.clone(), &mut environment)
+                    datum.eval(&mut environment)
                 })
             }
         }

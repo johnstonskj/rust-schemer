@@ -28,6 +28,10 @@ use std::fmt::Debug;
 // Public Types
 // ------------------------------------------------------------------------------------------------
 
+pub trait Evaluate: SchemeValue {
+    fn eval(&self, environment: &mut MutableRef<Environment>) -> Result<Expression, Error>;
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expression {
     Identifier(Identifier),
@@ -45,6 +49,7 @@ pub enum Expression {
     Environment(MutableRef<Environment>),
     Null,
     Unspecified,
+    // Other(Ref<dyn Evaluate>),
 }
 
 pub const VALUE_NAME_UNSPECIFIED: &str = "#!unspecified";
@@ -57,43 +62,40 @@ pub const VALUE_NAME_UNSPECIFIED: &str = "#!unspecified";
 // Public Functions
 // ------------------------------------------------------------------------------------------------
 
-pub fn eval_datum(
-    datum: Ref<Datum>,
-    environment: &mut MutableRef<Environment>,
-) -> Result<Expression, Error> {
-    Ok(match datum.as_ref() {
-        Datum::Symbol(v) => {
-            if let Some(value) = environment.borrow().get(&v) {
-                value.clone()
-            } else {
-                return Error::from(ErrorKind::UnboundVariable { name: v.clone() }).into();
-            }
-        }
-        Datum::Boolean(v) => Expression::Boolean(v.clone()),
-        Datum::Number(v) => Expression::Number(v.clone()),
-        Datum::Character(v) => Expression::Character(v.clone()),
-        Datum::String(v) => Expression::String(v.clone()),
-        Datum::ByteVector(v) => Expression::ByteVector(v.clone()),
-        Datum::Vector(v) => Expression::Vector(v.clone()),
-        Datum::List(v) => call_or_form_from_list(&v, environment)?,
-        Datum::Abbreviation(a, d) => match a {
-            Abbreviation::Quote => forms::quote(vec![d.clone()], environment)?,
-            Abbreviation::QuasiQuote => forms::quasi_quote(vec![d.clone()], environment)?,
-            Abbreviation::Unquote => forms::unquote(vec![d.clone()], environment)?,
-            Abbreviation::UnquoteSplicing => forms::unquote_splicing(vec![d.clone()], environment)?,
-        },
-        Datum::Labeled(_, _) => {
-            unreachable!()
-        }
-        Datum::LabelRef(_) => {
-            unreachable!()
-        }
-        Datum::Null => Expression::Null,
-    })
-}
-
 // ------------------------------------------------------------------------------------------------
 // Implementations
+// ------------------------------------------------------------------------------------------------
+
+impl Evaluate for Datum {
+    fn eval(&self, environment: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+        Ok(match self {
+            Datum::Symbol(v) => v.eval(environment)?,
+            Datum::Boolean(v) => v.eval(environment)?,
+            Datum::Number(v) => v.eval(environment)?,
+            Datum::Character(v) => v.eval(environment)?,
+            Datum::String(v) => v.eval(environment)?,
+            Datum::ByteVector(v) => v.eval(environment)?,
+            Datum::Vector(v) => v.eval(environment)?,
+            Datum::List(v) => call_or_form_from_list(&v, environment)?,
+            Datum::Abbreviation(a, d) => match a {
+                Abbreviation::Quote => forms::quote(vec![d.clone()], environment)?,
+                Abbreviation::QuasiQuote => forms::quasi_quote(vec![d.clone()], environment)?,
+                Abbreviation::Unquote => forms::unquote(vec![d.clone()], environment)?,
+                Abbreviation::UnquoteSplicing => {
+                    forms::unquote_splicing(vec![d.clone()], environment)?
+                }
+            },
+            Datum::Labeled(_, _) => {
+                unreachable!()
+            }
+            Datum::LabelRef(_) => {
+                unreachable!()
+            }
+            Datum::Null => Expression::Null,
+        })
+    }
+}
+
 // ------------------------------------------------------------------------------------------------
 
 impl SchemeRepr for Expression {
@@ -142,6 +144,15 @@ impl SchemeValue for Expression {
             Self::Null => TYPE_NAME_LIST,
             Self::Unspecified => VALUE_NAME_UNSPECIFIED,
             Self::Environment(v) => v.borrow().type_name(),
+        }
+    }
+}
+
+impl Evaluate for Expression {
+    fn eval(&self, environment: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+        match self {
+            Expression::Quotation(v) => v.as_ref().eval(environment),
+            _ => Ok(self.clone()),
         }
     }
 }
@@ -270,9 +281,7 @@ fn make_parameters(
     } else {
         // TODO: unwrap list, no clones
         let list = from.as_list().unwrap();
-        list.iter()
-            .map(|d| eval_datum(d.clone(), environment))
-            .collect()
+        list.iter().map(|d| d.eval(environment)).collect()
     }
 }
 

@@ -7,10 +7,14 @@ More detailed description, with
 
 */
 
+use crate::error::Error;
+use crate::eval::expression::Evaluate;
+use crate::eval::{Environment, Expression};
+use crate::read::datum::Datum;
 use crate::read::syntax_str::{
     SYNTAX_LEFT_PARENTHESIS_CHAR, SYNTAX_RIGHT_PARENTHESIS_CHAR, SYNTAX_VECTOR_PREFIX,
 };
-use crate::types::Ref;
+use crate::types::{MutableRef, Ref};
 use crate::types::{SchemeRepr, SchemeValue};
 use std::fmt::Debug;
 use std::iter::FromIterator;
@@ -140,6 +144,12 @@ where
         Self: Sized,
     {
         TYPE_NAME_VECTOR
+    }
+}
+
+impl Evaluate for Vector<Datum> {
+    fn eval(&self, _: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+        Ok(Expression::Vector(self.clone()))
     }
 }
 

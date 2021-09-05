@@ -8,12 +8,14 @@ More detailed description, with
 */
 
 use crate::error::{Error, ErrorKind};
+use crate::eval::expression::Evaluate;
+use crate::eval::{Environment, Expression};
 use crate::read::syntax_str::{
     SYNTAX_BYTE_VECTOR_PREFIX, SYNTAX_DOUBLE_QUOTE_CHAR, SYNTAX_LEFT_PARENTHESIS_CHAR,
     SYNTAX_RIGHT_PARENTHESIS_CHAR,
 };
 use crate::types::new_type::NewType;
-use crate::types::{SchemeRepr, SchemeValue};
+use crate::types::{MutableRef, SchemeRepr, SchemeValue};
 use std::borrow::Cow;
 use std::ops::Deref;
 use std::str::FromStr;
@@ -52,17 +54,6 @@ pub fn unescape_string(s: &str) -> Cow<str> {
 // Implementations
 // ------------------------------------------------------------------------------------------------
 
-impl SchemeRepr for SchemeString {
-    fn to_repr_string(&self) -> String {
-        format!(
-            "{}{}{}",
-            SYNTAX_DOUBLE_QUOTE_CHAR,
-            self.deref(),
-            SYNTAX_DOUBLE_QUOTE_CHAR
-        )
-    }
-}
-
 impl FromStr for SchemeString {
     type Err = Error;
 
@@ -80,7 +71,24 @@ impl FromStr for SchemeString {
     }
 }
 
+impl SchemeRepr for SchemeString {
+    fn to_repr_string(&self) -> String {
+        format!(
+            "{}{}{}",
+            SYNTAX_DOUBLE_QUOTE_CHAR,
+            self.deref(),
+            SYNTAX_DOUBLE_QUOTE_CHAR
+        )
+    }
+}
+
 scheme_value!(SchemeString, TYPE_NAME_STRING, "string");
+
+impl Evaluate for SchemeString {
+    fn eval(&self, _: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+        Ok(Expression::String(self.clone()))
+    }
+}
 
 impl SchemeString {
     pub fn new_unchecked(s: &str) -> Self {
@@ -106,6 +114,12 @@ impl SchemeRepr for ByteVector {
 }
 
 scheme_value!(ByteVector, TYPE_NAME_BYTE_VECTOR, "byte-vector");
+
+impl Evaluate for ByteVector {
+    fn eval(&self, _: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+        Ok(Expression::ByteVector(self.clone()))
+    }
+}
 
 // ------------------------------------------------------------------------------------------------
 // Private Functions
