@@ -171,11 +171,11 @@ impl Display for ErrorKind {
                 ErrorKind::ParserState { input, state } =>
                     if let Some(state) = state {
                         format!(
-                            "Unexpected input while parsing; input: {}, state: {}.",
+                            "Unexpected input while parsing; input: {:?}, state: {}.",
                             input, state
                         )
                     } else {
-                        format!("Unexpected input while parsing; input: {}.", input)
+                        format!("Unexpected input while parsing; input: {:?}.", input)
                     },
                 ErrorKind::ParseValue { kind, value } =>
                     format!("Error in parsing the value '{}' as a {}.", value, kind),

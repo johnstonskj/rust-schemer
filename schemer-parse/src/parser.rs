@@ -529,10 +529,14 @@ fn parse_decimal_number(input_pair: Pair<'_, Rule>, negative: bool) -> Result<Ex
 fn parse_data(input_pair: Pair<'_, Rule>) -> Result<Vec<Datum>, Error> {
     let mut data: Vec<Datum> = Default::default();
     match input_pair.as_rule() {
-        Rule::tokens => {
+        Rule::data => {
             for inner_pair in input_pair.into_inner() {
                 match inner_pair.as_rule() {
-                    Rule::datum => data.push(parse_datum(inner_pair)?),
+                    Rule::datum => {
+                        if let Some(datum) = parse_maybe_datum(inner_pair)? {
+                            data.push(datum)
+                        }
+                    }
                     Rule::EOI => {}
                     _ => unexpected_input!(inner_pair),
                 }
@@ -541,6 +545,14 @@ fn parse_data(input_pair: Pair<'_, Rule>) -> Result<Vec<Datum>, Error> {
         _ => unexpected_input!(input_pair),
     }
     Ok(data)
+}
+
+fn parse_maybe_datum(input_pair: Pair<'_, Rule>) -> Result<Option<Datum>, Error> {
+    match input_pair.as_rule() {
+        Rule::datum => Ok(Some(parse_datum_inner(input_pair)?)),
+        Rule::EOI => Ok(None),
+        _ => unexpected_input!(input_pair),
+    }
 }
 
 fn parse_datum(input_pair: Pair<'_, Rule>) -> Result<Datum, Error> {

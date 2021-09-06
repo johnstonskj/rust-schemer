@@ -20,7 +20,7 @@ use schemer_lang::{IMPLEMENTATION_NAME, IMPLEMENTATION_VERSION};
 use schemer_library::{
     make_preset_environment, PresetEnvironmentKind, DEFAULT_SCHEME_ENVIRONMENT_VERSION,
 };
-use schemer_parse::parser::parse_datum_str;
+use schemer_parse::parser::parse_data_str;
 use search_path::SearchPath;
 use std::borrow::Cow;
 use std::borrow::Cow::{Borrowed, Owned};
@@ -372,16 +372,21 @@ impl FromStr for BaseEnvironment {
 // ------------------------------------------------------------------------------------------------
 
 fn eval_datum_str(datum_str: &str, env: &mut MutableRef<Environment>) {
-    let result = parse_datum_str(&datum_str);
+    let result = parse_data_str(&datum_str);
     match result {
-        Ok(datum) => match datum.eval(env) {
-            Ok(result) => {
-                println!("{}", result.to_repr_string());
+        Ok(data) => {
+            for datum in data {
+                match datum.eval(env) {
+                    Ok(result) => {
+                        println!("{}", result.to_repr_string());
+                    }
+                    Err(err) => {
+                        eprintln!("{}", err);
+                        break;
+                    }
+                }
             }
-            Err(err) => {
-                println!("{}", err);
-            }
-        },
+        }
         Err(e) => {
             eprintln!("{}", e);
         }
