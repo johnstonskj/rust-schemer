@@ -61,6 +61,13 @@ macro_rules! eboolean {
     };
 }
 
+#[macro_export]
+macro_rules! echar {
+    ($v:expr) => {
+        Expression::Character(Char::from($v))
+    };
+}
+
 // macro_rules! expr_is_a {
 //     ($v:expr, $var:ident) => {
 //         matches!($var, Expression::$var(_))

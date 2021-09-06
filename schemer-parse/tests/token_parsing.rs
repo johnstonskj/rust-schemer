@@ -223,9 +223,3 @@ fn test_char_spec_name() {
 fn test_char_escaped() {
     assert_parsed_ok("#\\x2764");
 }
-
-#[cfg(feature = "char-names")]
-#[test]
-fn test_char_unicode_name() {
-    assert_parsed_ok("#\\black_star");
-}

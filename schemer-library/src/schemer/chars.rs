@@ -12,8 +12,10 @@ use crate::schemer::ID_LIB_SCHEMER;
 use schemer_lang::error::{Error, ErrorKind};
 use schemer_lang::eval::environment::Exports;
 use schemer_lang::eval::{Environment, Expression, Procedure};
-use schemer_lang::types::chars::{char_to_name, TYPE_NAME_CHAR};
-use schemer_lang::types::{Boolean, Char, Identifier, MutableRef, SchemeString, SchemeValue};
+use schemer_lang::types::chars::TYPE_NAME_CHAR;
+use schemer_lang::types::{
+    Boolean, Char, Identifier, Integer, MutableRef, Number, SchemeString, SchemeValue,
+};
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
@@ -39,7 +41,8 @@ pub fn schemer_chars_exports() -> Exports {
 
     export_builtin!(exports, "char-alphanumeric?" => is_alphanumeric "char");
     export_builtin!(exports, "char-control?" => is_control "char");
-    export_builtin!(exports, "char->name" => char_name "char");
+    export_builtin!(exports, "char-name" => char_name "char");
+    export_builtin!(exports, "char->codepoint" => char_to_codepoint "char");
 
     exports
 }
@@ -51,8 +54,23 @@ pub fn char_name(
     arguments: Vec<Expression>,
     _: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
-    Ok(estring!(match &arguments[0] {
-        Expression::Character(v) => char_to_name(**v),
+    Ok(match &arguments[0] {
+        Expression::Character(v) => match v.to_name() {
+            None => efalse!(),
+            Some(s) => estring!(s),
+        },
+        e => {
+            unexpected_type!(=> TYPE_NAME_CHAR, e)
+        }
+    })
+}
+
+pub fn char_to_codepoint(
+    arguments: Vec<Expression>,
+    _: &mut MutableRef<Environment>,
+) -> Result<Expression, Error> {
+    Ok(einteger!(match &arguments[0] {
+        Expression::Character(v) => v.to_unicode_codepoint(),
         e => {
             unexpected_type!(=> TYPE_NAME_CHAR, e)
         }

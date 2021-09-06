@@ -14,9 +14,8 @@ use schemer_lang::read::syntax_str::{
     VALUE_BOOLEAN_TRUE, VALUE_BOOLEAN_TRUE_SHORT,
 };
 use schemer_lang::types::booleans::TYPE_NAME_BOOLEAN;
-use schemer_lang::types::chars::{name_to_char, TYPE_NAME_CHAR};
+use schemer_lang::types::chars::TYPE_NAME_CHAR;
 use schemer_lang::types::{Boolean, Char, Identifier, Number};
-use std::convert::TryFrom;
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
@@ -58,13 +57,13 @@ pub fn string_to_char(s: &str) -> Result<Char, Error> {
                     .into(),
                 )
             })
-            .and_then(|cv| Char::try_from(cv))
+            .and_then(|cv| Char::from_unicode_codepoint(cv))
     } else if s.starts_with(SYNTAX_CHAR_PREFIX) && char_length == 3 {
         let cs = &s[2..];
         let c = cs.chars().next().unwrap();
         Ok(c.into())
     } else {
-        if let Some(c) = name_to_char(s) {
+        if let Some(c) = Char::from_name(s) {
             Ok(c.into())
         } else {
             Err(ErrorKind::ParseValue {
