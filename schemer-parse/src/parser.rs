@@ -93,6 +93,14 @@ pub fn parse_token_str(source: &str) -> Result<Parsed<'_, Vec<Token>>, Error> {
     Ok(make_parsed(parse_tokens(pair)?, source, matched_str))
 }
 
+pub fn parse_data_str(source: &str) -> Result<Vec<Datum>, Error> {
+    let mut parsed = SimpleSyntax::parse(Rule::data, source)
+        .map_err(|e| Error::chain(Box::new(e), ErrorKind::Parser))?;
+    debug_token_tree!(parsed);
+    let pair = parsed.next().unwrap();
+    parse_data(pair)
+}
+
 pub fn parse_datum_str(source: &str) -> Result<Datum, Error> {
     let mut parsed = SimpleSyntax::parse(Rule::datum, source)
         .map_err(|e| Error::chain(Box::new(e), ErrorKind::Parser))?;
@@ -516,6 +524,23 @@ fn parse_decimal_number(input_pair: Pair<'_, Rule>, negative: bool) -> Result<Ex
             },
         )
     })
+}
+
+fn parse_data(input_pair: Pair<'_, Rule>) -> Result<Vec<Datum>, Error> {
+    let mut data: Vec<Datum> = Default::default();
+    match input_pair.as_rule() {
+        Rule::tokens => {
+            for inner_pair in input_pair.into_inner() {
+                match inner_pair.as_rule() {
+                    Rule::datum => data.push(parse_datum(inner_pair)?),
+                    Rule::EOI => {}
+                    _ => unexpected_input!(inner_pair),
+                }
+            }
+        }
+        _ => unexpected_input!(input_pair),
+    }
+    Ok(data)
 }
 
 fn parse_datum(input_pair: Pair<'_, Rule>) -> Result<Datum, Error> {

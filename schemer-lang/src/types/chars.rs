@@ -110,12 +110,7 @@ impl SchemeRepr for Char {
         } else if let Some(name) = char_names::char_to_name(**self) {
             name
         } else {
-            let escaped = self.escape_unicode().to_string();
-            format!(
-                "{}{}",
-                SYNTAX_HEX_CHAR_PREFIX,
-                &escaped[3..escaped.len() - 1].to_uppercase()
-            )
+            format!("{}{:X}", SYNTAX_HEX_CHAR_PREFIX, *self.deref() as u32)
         }
     }
 }
@@ -177,6 +172,7 @@ use crate::eval::expression::Evaluate;
 use crate::eval::{Environment, Expression};
 #[cfg(not(feature = "char-names"))]
 use default_char_names as char_names;
+use std::ops::Deref;
 
 mod default_char_names {
 
@@ -270,7 +266,8 @@ mod tests {
 
     #[test]
     fn test_repr_non_ascii() {
-        assert_eq!("#\\xF00".to_string(), Char::from('ༀ').to_repr_string());
+        assert_eq!("#\\ༀ".to_string(), Char::from('ༀ').to_repr_string());
+        assert_eq!("#\\x1F02A".to_string(), Char::from('🀪').to_repr_string());
     }
 
     #[test]
