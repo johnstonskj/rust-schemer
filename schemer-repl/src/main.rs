@@ -26,6 +26,7 @@ use std::borrow::Cow;
 use std::borrow::Cow::{Borrowed, Owned};
 use std::env;
 use std::fmt::{Display, Formatter};
+use std::io::Read;
 use std::path::PathBuf;
 use std::str::FromStr;
 use structopt::StructOpt;
@@ -54,7 +55,7 @@ fn main() {
 
     if let Some(datum_str) = command_args.expression {
         eval_datum_str(&datum_str, &mut env);
-    } else if atty::is(atty::Stream::Stdout) {
+    } else if atty::is(atty::Stream::Stdin) {
         println!(
             "Welcome to {}, v{}.",
             IMPLEMENTATION_NAME, IMPLEMENTATION_VERSION
@@ -134,6 +135,14 @@ fn main() {
             }
         }
         rl.append_history(&history_file).unwrap();
+    } else {
+        let mut input = std::io::stdin();
+        let mut buffer = String::new();
+
+        input
+            .read_to_string(&mut buffer)
+            .expect("Could not read stdin");
+        eval_datum_str(&buffer, &mut env);
     }
 }
 
