@@ -7,7 +7,7 @@ More detailed description, with
 
 */
 
-use crate::forms::import::LibraryName;
+use crate::forms::library::LibraryName;
 use crate::scheme::base::ports::scheme_base_ports_exports;
 use crate::scheme::base::strings::scheme_base_string_exports;
 use crate::scheme::base::types::scheme_base_type_predicates_exports;

@@ -7,7 +7,7 @@ More detailed description, with
 
  */
 
-use crate::forms::import::LibraryName;
+use crate::forms::library::LibraryName;
 
 // ------------------------------------------------------------------------------------------------
 // Public Types

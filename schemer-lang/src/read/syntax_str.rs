@@ -93,3 +93,8 @@ pub const FORM_NAME_UNQUOTE: &str = "unquote";
 pub const FORM_NAME_UNQUOTE_SPLICING: &str = "unquote-splicing";
 pub const FORM_NAME_UNLESS: &str = "unless";
 pub const FORM_NAME_WHEN: &str = "when";
+
+pub const FORM_PART_ONLY: &str = "only";
+pub const FORM_PART_EXCEPT: &str = "except";
+pub const FORM_PART_PREFIX: &str = "prefix";
+pub const FORM_PART_RENAME: &str = "rename";

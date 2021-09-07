@@ -7,7 +7,7 @@ More detailed description, with
 
 */
 
-use crate::forms::import::LibraryName;
+use crate::forms::library::LibraryName;
 use crate::schemer::ID_LIB_SCHEMER;
 use schemer_lang::error::{Error, ErrorKind};
 use schemer_lang::eval::callable::Callable;

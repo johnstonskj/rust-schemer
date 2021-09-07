@@ -49,7 +49,6 @@ pub enum Expression {
     Environment(MutableRef<Environment>),
     Null,
     Unspecified,
-    // Other(Ref<dyn Evaluate>),
 }
 
 pub const VALUE_NAME_UNSPECIFIED: &str = "#!unspecified";

@@ -7,7 +7,8 @@ More detailed description, with
 
  */
 
-use crate::forms::import::LibraryName;
+use crate::forms::library::LibraryName;
+use crate::forms::standard_form_exports;
 use crate::scheme::base::numbers::scheme_base_number_exports;
 use crate::scheme::base::ports::scheme_base_ports_exports;
 use crate::scheme::base::strings::scheme_base_string_exports;
@@ -42,6 +43,7 @@ pub fn scheme_base_exports() -> Exports {
 
     export_builtin!(exports, "features" => features);
 
+    exports.import(standard_form_exports());
     exports.import(scheme_base_number_exports());
     exports.import(scheme_base_ports_exports());
     exports.import(scheme_base_string_exports());

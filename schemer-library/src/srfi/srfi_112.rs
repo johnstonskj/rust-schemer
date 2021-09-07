@@ -7,13 +7,12 @@ More detailed description, with
 
  */
 
-use super::ID_LIB_SRFI;
-use crate::forms::import::LibraryName;
+use crate::forms::library::LibraryName;
 use schemer_lang::error::{Error, ErrorKind};
 use schemer_lang::eval::environment::Exports;
 use schemer_lang::eval::Procedure;
 use schemer_lang::eval::{Environment, Expression};
-use schemer_lang::types::{Identifier, MutableRef, SchemeString};
+use schemer_lang::types::{Identifier, Integer, MutableRef, SchemeString};
 use schemer_lang::{IMPLEMENTATION_NAME, IMPLEMENTATION_VERSION};
 
 // ------------------------------------------------------------------------------------------------
@@ -28,7 +27,11 @@ use schemer_lang::{IMPLEMENTATION_NAME, IMPLEMENTATION_VERSION};
 // Public Functions
 // ------------------------------------------------------------------------------------------------
 
-library_name!(ID_LIB_SRFI_112, "112", ID_LIB_SRFI, srfi_112_name);
+pub const ID_LIB_SRFI_112: Integer = 112;
+
+pub fn srfi_112_name() -> LibraryName {
+    LibraryName::srfi(ID_LIB_SRFI_112).unwrap()
+}
 
 pub fn srfi_112_exports() -> Exports {
     let mut exports = Exports::default();

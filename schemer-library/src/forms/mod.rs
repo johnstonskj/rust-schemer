@@ -47,3 +47,7 @@ pub fn standard_form_exports() -> Exports {
 
 pub mod import;
 use import::import as import_form;
+
+pub mod include;
+
+pub mod library;

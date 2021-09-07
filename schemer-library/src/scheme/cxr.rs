@@ -7,7 +7,7 @@ More detailed description, with
 
 */
 
-use crate::forms::import::LibraryName;
+use crate::forms::library::LibraryName;
 use crate::scheme::ID_LIB_SCHEME;
 use schemer_lang::eval::environment::Exports;
 

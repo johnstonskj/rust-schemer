@@ -290,19 +290,7 @@ fn set_bang(
 
 // §4.1.7. Inclusion ------------------------------------------------------------------------------
 
-fn include(
-    _arguments: Vec<Ref<Datum>>,
-    _env: &mut MutableRef<Environment>,
-) -> Result<Expression, Error> {
-    todo!()
-}
-
-fn include_ci(
-    _arguments: Vec<Ref<Datum>>,
-    _env: &mut MutableRef<Environment>,
-) -> Result<Expression, Error> {
-    todo!()
-}
+// See schemer_lang::forms::include
 
 // §4.2. Derived expression types -----------------------------------------------------------------
 
