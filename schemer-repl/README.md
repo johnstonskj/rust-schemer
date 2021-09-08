@@ -8,7 +8,8 @@ A repl for the R7RS Scheme programming language in Rust.
 
 -----
 
-This crate provides the shell for executing both scripts and interactive sessions.
+This crate provides the shell for executing both scripts and interactive sessions. The repl relies on the amazing
+[rustyline](https://crates.io/crates/rustyline) with custom hints and completion!
 
 # Example
 
