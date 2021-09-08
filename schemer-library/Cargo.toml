@@ -1,6 +1,6 @@
 [package]
 name = "schemer-library"
-description = "A pedantic implementation of the core R7RS Scheme language library in Rust."
+description = "A pedagogical implementation of the core R7RS Scheme language library in Rust."
 authors = ["Simon Johnston <johnstonskj@gmail.com>"]
 version = "0.1.0"
 edition = "2018"

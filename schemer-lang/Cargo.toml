@@ -1,6 +1,6 @@
 [package]
 name = "schemer-lang"
-description = "A pedantic implementation of the core R7RS Scheme programming language in Rust."
+description = "A pedagogical implementation of the core R7RS Scheme programming language in Rust."
 authors = ["Simon Johnston <johnstonskj@gmail.com>"]
 version = "0.1.0"
 edition = "2018"

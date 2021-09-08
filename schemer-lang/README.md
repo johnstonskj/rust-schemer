@@ -1,6 +1,6 @@
 # Crate schemer-lang
 
-A pedantic implementation of the core R7RS Scheme programming language in Rust.
+A pedagogical implementation of the core R7RS Scheme programming language in Rust.
 
 ![MIT License](https://img.shields.io/badge/license-mit-118811.svg)
 [![crates.io](https://img.shields.io/crates/v/schemer_lang.svg)](https://crates.io/crates/schemer_lang)
