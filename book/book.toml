@@ -1,0 +1,14 @@
+[book]
+authors = ["Simon Johnston <johnstonskj@gmail.com>"]
+language = "en"
+multilingual = false
+src = "src"
+title = "Schemer — R7RS Scheme in Rust"
+
+[rust]
+edition = "2018"
+
+[output.html]
+git-repository-url = "https://github.com/johnstonskj/rust-schemer"
+additional-css = ["schemer.css"]
+curly-quotes = true
