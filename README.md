@@ -2,7 +2,7 @@
 
 A pedagogical implementation of the [R7RS](https://small.r7rs.org/) 
 [Scheme](https://en.wikipedia.org/wiki/Scheme_(programming_language)) programming language in 
-[Rust](https://www.rust-lang.org/.
+[Rust](https://www.rust-lang.org/).
 
 ![MIT License](https://img.shields.io/badge/license-mit-118811.svg)
 ![Minimum Rust Version](https://img.shields.io/badge/Min%20Rust-1.53-green.svg)
