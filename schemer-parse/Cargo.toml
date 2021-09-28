@@ -23,4 +23,4 @@ schemer-lang = { version = "0.1", path = "../schemer-lang" }
 pest_ascii_tree = "0.1"
 
 [dev-dependencies]
-pretty_assertions = "0.7"
+pretty_assertions = "1.0"
