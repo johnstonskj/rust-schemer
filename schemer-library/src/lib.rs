@@ -38,6 +38,9 @@ pub enum PresetEnvironmentKind {
 
 pub const DEFAULT_SCHEME_ENVIRONMENT_VERSION: Integer = 5;
 
+pub const INTERACTION_ENVIRONMENT_NAME: &str = "*interaction*";
+pub const SCHEME_BASE_ENVIRONMENT_NAME: &str = "*scheme-base*";
+
 // ------------------------------------------------------------------------------------------------
 // Private Types
 // ------------------------------------------------------------------------------------------------
@@ -55,7 +58,7 @@ pub fn make_preset_environment(
                 DEFAULT_SCHEME_ENVIRONMENT_VERSION,
             ))?;
             base.borrow_mut().make_immutable();
-            let interaction = Environment::new_child_named(base, "*interaction*");
+            let interaction = Environment::new_child_named(base, INTERACTION_ENVIRONMENT_NAME);
             interaction.borrow_mut().import(schemer_repl_exports())?;
             interaction
                 .borrow_mut()
@@ -66,7 +69,7 @@ pub fn make_preset_environment(
         }
         PresetEnvironmentKind::Null(v) => {
             if v == 5 {
-                let top = Environment::top_level();
+                let top = Environment::top();
                 top.borrow_mut().import(standard_form_exports())?;
                 top.borrow_mut().make_immutable();
                 Ok(top)
@@ -91,7 +94,7 @@ pub fn make_preset_environment(
                 DEFAULT_SCHEME_ENVIRONMENT_VERSION,
             ))?;
             base.borrow_mut().make_immutable();
-            let scheme_base = Environment::new_child_named(base, "*scheme-base*");
+            let scheme_base = Environment::new_child_named(base, SCHEME_BASE_ENVIRONMENT_NAME);
             scheme_base.borrow_mut().import(scheme_base_exports())?;
             scheme_base.borrow_mut().make_immutable();
             Ok(scheme_base)

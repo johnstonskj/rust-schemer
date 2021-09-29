@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate log;
 
+use colored::Colorize;
 use rustyline::completion::{Completer, Pair};
 use rustyline::config::OutputStreamType;
 use rustyline::error::ReadlineError;
@@ -24,22 +25,32 @@ use schemer_parse::parser::parse_data_str;
 use search_path::SearchPath;
 use std::borrow::Cow;
 use std::borrow::Cow::{Borrowed, Owned};
-use std::env;
 use std::fmt::{Display, Formatter};
 use std::io::Read;
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::{env, fs};
 use structopt::StructOpt;
+
+// ------------------------------------------------------------------------------------------------
+// REPL environment values
+// ------------------------------------------------------------------------------------------------
+
+pub const REPL_ENVIRONMENT_ID: &'static str = "*repl*";
+
+pub const REPL_HISTORY_FILE: &'static str = "schemer-repl-history-file";
+
+pub const REPL_INIT_FILE: &'static str = "schemer-repl-init-file";
+
+pub const REPL_PROMPT_ID: &'static str = "schemer-repl-prompt";
+pub const REPL_PROMPT_DEFAULT: &'static str = "> ";
+
+pub const REPL_PROMPT_COLOR_ID: &'static str = "schemer-repl-prompt-color";
+pub const REPL_PROMPT_COLOR_DEFAULT: &'static str = "bright green";
 
 // ------------------------------------------------------------------------------------------------
 // Main
 // ------------------------------------------------------------------------------------------------
-
-struct Prompt<'a> {
-    pre_text: &'a str,
-    prompt_str: &'a str,
-    post_text: &'a str,
-}
 
 fn main() {
     let command_args = parse_command_line();
@@ -51,10 +62,10 @@ fn main() {
         BaseEnvironment::Null => PresetEnvironmentKind::Null(DEFAULT_SCHEME_ENVIRONMENT_VERSION),
     })
     .unwrap();
-    let mut env = Environment::new_child_named(base_env, "*repl*");
+    let mut env = Environment::new_child_named(base_env, REPL_ENVIRONMENT_ID);
 
     if let Some(datum_str) = command_args.expression {
-        eval_datum_str(&datum_str, &mut env);
+        eval_datum_str(&datum_str, &mut env, false);
     } else if atty::is(atty::Stream::Stdin) {
         println!(
             "Welcome to {}, v{}.",
@@ -86,28 +97,39 @@ fn main() {
             println!("No previous history.");
         }
 
-        info!("'(schemer-repl-history-file . {:?})", history_file);
         let _ = env.borrow_mut().insert(
-            Identifier::from_str_unchecked("schemer-repl-history-file"),
+            Identifier::from_str_unchecked(REPL_PROMPT_ID),
+            Expression::String(REPL_PROMPT_DEFAULT.to_string().into()),
+        );
+
+        let _ = env.borrow_mut().insert(
+            Identifier::from_str_unchecked(REPL_PROMPT_COLOR_ID),
+            Expression::String(REPL_PROMPT_COLOR_DEFAULT.to_string().into()),
+        );
+
+        info!("'({} . {:?})", REPL_HISTORY_FILE, history_file);
+        let _ = env.borrow_mut().insert(
+            Identifier::from_str_unchecked(REPL_HISTORY_FILE),
             Expression::String(SchemeString::from(history_file.clone())),
         );
+
         if !command_args.no_init_file {
-            init_file_path().map(|p| {
-                let _ = env.borrow_mut().insert(
-                    Identifier::from_str_unchecked("schemer-repl-init-file"),
-                    Expression::String(SchemeString::from(p.to_string_lossy().to_string())),
-                );
-                info!("(load '(schemer-repl-init-file . {:?}))", p);
-            });
+            if let Some(p) = init_file_path() {
+                if p.is_file() {
+                    info!("(load-init-file? '({} . {:?}))", REPL_INIT_FILE, p);
+                    let _ = env.borrow_mut().insert(
+                        Identifier::from_str_unchecked(REPL_INIT_FILE),
+                        Expression::String(SchemeString::from(p.to_string_lossy().to_string())),
+                    );
+                    let init_file_content = fs::read_to_string(p).expect("Error reading init file");
+                    eval_datum_str(&init_file_content, &mut env, true);
+                }
+            }
         }
 
-        let prompt = if command_args.color_off {
-            Prompt::plain("> ")
-        } else {
-            Prompt::colorized("> ")
-        };
-
         loop {
+            let prompt = make_prompt(command_args.color_off, &env);
+
             rl.helper_mut()
                 .expect("No command-line helper")
                 .colored_prompt = prompt.to_string();
@@ -117,7 +139,7 @@ fn main() {
                 Ok(line) => {
                     if !line.trim().is_empty() {
                         rl.add_history_entry(line.as_str());
-                        eval_datum_str(line.as_str(), &mut env);
+                        eval_datum_str(line.as_str(), &mut env, false);
                     }
                 }
                 Err(ReadlineError::Interrupted) => {
@@ -142,7 +164,7 @@ fn main() {
         input
             .read_to_string(&mut buffer)
             .expect("Could not read stdin");
-        eval_datum_str(&buffer, &mut env);
+        eval_datum_str(&buffer, &mut env, true);
     }
 }
 
@@ -235,7 +257,7 @@ impl Highlighter for ReplHelper {
     }
 
     fn highlight_hint<'h>(&self, hint: &'h str) -> Cow<'h, str> {
-        Owned("\x1b[1m".to_owned() + hint + "\x1b[m")
+        Owned(hint.bold().to_string())
     }
 
     fn highlight_char(&self, line: &str, pos: usize) -> bool {
@@ -258,35 +280,25 @@ impl Validator for ReplHelper {
 
 // ------------------------------------------------------------------------------------------------
 
-impl<'a> Default for Prompt<'a> {
-    fn default() -> Self {
-        Self::colorized(Self::DEFAULT_PROMPT_STR)
-    }
-}
-
-impl<'a> Display for Prompt<'a> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}{}{}", self.pre_text, self.prompt_str, self.post_text)
-    }
-}
-
-impl<'a> Prompt<'a> {
-    const DEFAULT_PROMPT_STR: &'static str = "> ";
-
-    pub fn colorized(prompt_str: &'a str) -> Self {
-        Self {
-            pre_text: "\x1b[1;32m",
-            prompt_str,
-            post_text: "\x1b[0m",
-        }
-    }
-
-    pub fn plain(prompt_str: &'a str) -> Self {
-        Self {
-            pre_text: "",
-            prompt_str,
-            post_text: "",
-        }
+fn make_prompt(no_color: bool, env: &MutableRef<Environment>) -> String {
+    let prompt = match env
+        .borrow()
+        .get(&Identifier::from_str_unchecked(REPL_PROMPT_ID))
+    {
+        Some(Expression::String(v)) => v.to_string(),
+        _ => REPL_PROMPT_DEFAULT.to_string(),
+    };
+    if no_color {
+        prompt
+    } else {
+        let prompt_color = match env
+            .borrow()
+            .get(&Identifier::from_str_unchecked(REPL_PROMPT_COLOR_ID))
+        {
+            Some(Expression::String(v)) => v.to_string(),
+            _ => REPL_PROMPT_COLOR_DEFAULT.to_string(),
+        };
+        (&prompt.color(prompt_color)).to_string()
     }
 }
 
@@ -380,14 +392,16 @@ impl FromStr for BaseEnvironment {
 // Private Functions
 // ------------------------------------------------------------------------------------------------
 
-fn eval_datum_str(datum_str: &str, env: &mut MutableRef<Environment>) {
+fn eval_datum_str(datum_str: &str, env: &mut MutableRef<Environment>, silent: bool) {
     let result = parse_data_str(&datum_str);
     match result {
         Ok(data) => {
             for datum in data {
                 match datum.eval(env) {
                     Ok(result) => {
-                        println!("{}", result.to_repr_string());
+                        if !silent {
+                            println!("{}", result.to_repr_string());
+                        }
                     }
                     Err(err) => {
                         eprintln!("{}", err);

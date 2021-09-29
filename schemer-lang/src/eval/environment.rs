@@ -37,6 +37,8 @@ pub type ExportList = BTreeMap<Identifier, Expression>;
 
 pub type Exports = NewType<ExportList>;
 
+pub const TOP_ENVIRONMENT_NAME: &str = "*top*";
+
 // ------------------------------------------------------------------------------------------------
 // Private Types
 // ------------------------------------------------------------------------------------------------
@@ -65,22 +67,14 @@ impl SchemeRepr for Environment {
 }
 
 impl Environment {
-    pub fn named(name: &str) -> MutableRef<Self> {
+    pub fn top() -> MutableRef<Self> {
         Self {
-            name: Some(name.to_string()),
+            name: Some(TOP_ENVIRONMENT_NAME.to_string()),
             values: Default::default(),
             parent: None,
             immutable: false,
         }
         .into_ref()
-    }
-
-    pub fn top_level() -> MutableRef<Self> {
-        Environment::named("*top*")
-    }
-
-    pub fn empty() -> MutableRef<Self> {
-        Environment::named("*empty*")
     }
 
     pub fn new_child(parent: MutableRef<Self>) -> MutableRef<Self> {
@@ -96,7 +90,7 @@ impl Environment {
     pub fn new_child_named(parent: MutableRef<Self>, name: &str) -> MutableRef<Self> {
         Self {
             name: Some(format!(
-                "*{}*",
+                "{}",
                 name.replace(SYNTAX_SPACE_CHAR, SYNTAX_HYPHEN)
             )),
             values: Default::default(),

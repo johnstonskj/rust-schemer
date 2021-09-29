@@ -199,6 +199,8 @@ fn load_library_exports(name: LibraryName) -> Result<Exports, Error> {
     if let Some(exports) = loaded.get(&name.to_repr_string()) {
         Ok((exports)())
     } else {
+        println!("loading {:?}", name.to_path());
+        println!("path {:?}", library_path());
         if let Some(_load_path) = library_path().find(&name.to_path().unwrap()) {
             todo!()
         } else {

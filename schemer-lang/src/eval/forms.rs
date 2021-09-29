@@ -50,17 +50,21 @@ pub const TYPE_NAME_FORM: &str = "standard-form";
 // Public Functions
 // ------------------------------------------------------------------------------------------------
 
-pub fn standard_form_exports() -> Exports {
+pub fn syntactic_core_exports() -> Exports {
     let mut exports = Exports::default();
 
     export_standard_form!(exports, FORM_NAME_QUOTE => quote "datum");
-    export_standard_form!(exports, FORM_NAME_LAMBDA => lambda "formals" ; "body");
     export_standard_form!(exports, FORM_NAME_IF => conditional "test" "consequence" ; "alternate");
-
+    export_standard_form!(exports, FORM_NAME_LAMBDA => lambda "formals" ; "body");
     export_standard_form!(exports, FORM_NAME_SET => set_bang "variable" "expression");
 
-    export_standard_form!(exports, FORM_NAME_BEGIN => begin ; "expression-or-definition");
+    exports
+}
 
+pub fn standard_form_exports() -> Exports {
+    let mut exports = syntactic_core_exports();
+
+    export_standard_form!(exports, FORM_NAME_BEGIN => begin ; "expression-or-definition");
     export_standard_form!(exports, FORM_NAME_DEFINE => define "variable-or-formals" "expression-or-body" ; "expression-or-body");
 
     exports
