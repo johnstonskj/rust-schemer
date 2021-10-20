@@ -309,19 +309,22 @@ impl Datum {
         }
     }
 
-    pub fn is_list(&self) -> bool {
+    pub fn is_pair(&self) -> bool {
         matches!(self, Datum::List(_))
     }
 
-    pub fn as_list(&self) -> Option<&Pair> {
+    pub fn as_pair(&self) -> Option<&Pair> {
         match self {
             Self::List(v) => Some(v),
             _ => None,
         }
     }
 
-    pub fn is_list_or_null(&self) -> bool {
-        matches!(self, Datum::List(_) | Datum::Null)
+    pub fn is_list(&self) -> bool {
+        match self {
+            Datum::List(lst) => lst.is_proper_list(),
+            _ => false,
+        }
     }
 
     pub fn is_vector(&self) -> bool {

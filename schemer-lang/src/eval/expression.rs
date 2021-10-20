@@ -279,7 +279,7 @@ fn make_parameters(
         Ok(Default::default())
     } else {
         // TODO: unwrap list, no clones
-        let list = from.as_list().unwrap();
+        let list = from.as_pair().unwrap();
         list.iter().map(|d| d.eval(environment)).collect()
     }
 }

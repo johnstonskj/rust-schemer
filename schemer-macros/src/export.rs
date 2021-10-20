@@ -164,7 +164,7 @@ macro_rules! is_list_a {
         ) -> Result<Expression, Error> {
             Ok(eboolean!(match &arguments[0] {
                 Expression::Quotation(v) => {
-                    if let Some(pair) = v.as_list() {
+                    if let Some(pair) = v.as_pair() {
                         $closure(pair)
                     } else {
                         unexpected_type!(=> TYPE_NAME_LIST, v)

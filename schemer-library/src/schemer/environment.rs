@@ -9,10 +9,11 @@ More detailed description, with
 
 use crate::forms::library::LibraryName;
 use crate::schemer::ID_LIB_SCHEMER;
-use schemer_lang::error::Error;
-use schemer_lang::eval::environment::Exports;
+use schemer_lang::error::{Error, ErrorKind};
+use schemer_lang::eval::environment::{Exports, TYPE_NAME_ENVIRONMENT};
 use schemer_lang::eval::{Environment, Expression, Procedure};
-use schemer_lang::types::{Boolean, Identifier, MutableRef};
+use schemer_lang::types::symbols::TYPE_NAME_SYMBOL;
+use schemer_lang::types::{Boolean, Identifier, MutableRef, SchemeString, SchemeValue};
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
@@ -38,11 +39,12 @@ pub fn schemer_environment_exports() -> Exports {
 
     export_builtin!(exports, "current-environment" => current_environment);
     export_builtin!(exports, "environment?" => is_environment "obj");
+    export_builtin!(exports, "environment-name" => name "env");
     export_builtin!(exports, "environment-is-immutable?" => is_immutable "env");
     export_builtin!(exports, "environment-has-parent?" => has_parent "env");
-    export_builtin!(exports, "environment-bound-names" => bound_names "env");
-    export_builtin!(exports, "environment-bindings" => bindings "env");
     export_builtin!(exports, "environment-has-binding?" => is_bound "env" "id");
+    // export_builtin!(exports, "environment-bound-names" => bound_names "env");
+    // export_builtin!(exports, "environment-bindings" => bindings "env");
 
     exports
 }
@@ -68,42 +70,82 @@ fn is_immutable(
     arguments: Vec<Expression>,
     _: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
-    Ok(eboolean!(
-        if let Expression::Environment(env) = &arguments[0] {
-            env.borrow().is_immutable()
-        } else {
-            false
+    match &arguments[0] {
+        Expression::Environment(env) => Ok(eboolean!(env.borrow().is_immutable())),
+        e => {
+            unexpected_type!(TYPE_NAME_ENVIRONMENT, e)
         }
-    ))
+    }
+}
+
+fn name(arguments: Vec<Expression>, _: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+    match &arguments[0] {
+        Expression::Environment(env) => Ok(match env.borrow().name() {
+            None => efalse!(),
+            Some(name) => estring!(name.to_string()),
+        }),
+        e => {
+            unexpected_type!(TYPE_NAME_ENVIRONMENT, e)
+        }
+    }
 }
 
 fn has_parent(
     arguments: Vec<Expression>,
     _: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
-    Ok(eboolean!(
-        if let Expression::Environment(env) = &arguments[0] {
-            env.borrow().has_parent()
-        } else {
-            false
+    match &arguments[0] {
+        Expression::Environment(env) => Ok(eboolean!(env.borrow().has_parent())),
+        e => {
+            unexpected_type!(TYPE_NAME_ENVIRONMENT, e)
         }
-    ))
+    }
 }
 
-fn is_bound(_: Vec<Expression>, _env: &mut MutableRef<Environment>) -> Result<Expression, Error> {
-    todo!()
-}
-
-fn bound_names(
-    _: Vec<Expression>,
-    _env: &mut MutableRef<Environment>,
+fn is_bound(
+    arguments: Vec<Expression>,
+    _: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
-    todo!()
+    let identifier = match &arguments[1] {
+        Expression::Quotation(datum) => {
+            if datum.is_symbol() {
+                Ok(datum.as_symbol().unwrap())
+            } else {
+                unexpected_type!(TYPE_NAME_SYMBOL, datum)
+            }
+        }
+        e => {
+            println!("{:#?}", e);
+            unexpected_type!(TYPE_NAME_SYMBOL, e)
+        }
+    }?;
+    match &arguments[0] {
+        Expression::Environment(env) => Ok(eboolean!(env.borrow().is_bound(identifier))),
+        e => {
+            unexpected_type!(TYPE_NAME_ENVIRONMENT, e)
+        }
+    }
 }
 
-fn bindings(_: Vec<Expression>, _env: &mut MutableRef<Environment>) -> Result<Expression, Error> {
-    todo!()
-}
+// fn bound_names(
+//     _: Vec<Expression>,
+//     _env: &mut MutableRef<Environment>,
+// ) -> Result<Expression, Error> {
+//     todo!()
+// }
+//
+// fn bindings(_: Vec<Expression>, _env: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+//     Ok(Expression::Quotation(Ref::new(Datum::from(vec_to_list(
+//         std::env::vars()
+//             .map(|(k, v)| {
+//                 Datum::List(Pair::cons(
+//                     Datum::String(SchemeString::from(k)).into(),
+//                     Datum::String(SchemeString::from(v)).into(),
+//                 ))
+//             })
+//             .collect(),
+//     )))))
+// }
 
 // ------------------------------------------------------------------------------------------------
 // Modules

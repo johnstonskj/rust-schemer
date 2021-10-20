@@ -100,6 +100,10 @@ impl Environment {
         .into_ref()
     }
 
+    pub fn name(&self) -> Option<&String> {
+        self.name.as_ref()
+    }
+
     pub fn return_to_parent(self) -> Option<MutableRef<Self>> {
         self.parent
     }

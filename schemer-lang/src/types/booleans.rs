@@ -70,6 +70,9 @@ impl Boolean {
     pub fn is_false(&self) -> bool {
         *self.deref() == false
     }
+    pub fn not(&self) -> bool {
+        !*self.deref()
+    }
 }
 // ------------------------------------------------------------------------------------------------
 // Private Functions

@@ -209,7 +209,7 @@ impl Pair {
     }
 
     pub fn is_proper_pair(&self) -> bool {
-        self.cdr.is_list_or_null()
+        self.cdr.is_pair() || self.cdr.is_null()
     }
 
     pub fn is_proper_list(&self) -> bool {
