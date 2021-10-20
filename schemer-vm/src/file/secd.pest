@@ -123,6 +123,23 @@ comment_text = {
 
 // -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
+// Syntax extension: keywords. This uses the syntax already in use in
+// [Racket](https://docs.racket-lang.org/guide/keywords.html),
+// [Guile](https://www.gnu.org/software/guile/manual/html_node/Keyword-Read-Syntax.html), and
+// [Kawa](https://www.gnu.org/software/texinfo/gsoc-2017-js-example/kawa/Keywords.html).
+//
+// Alternatives:
+//  ":" ~ identifier -> Guile terms this a prefixed identifier.
+// identifier ~ ":" -> Defined in [SRFI-88](https://srfi.schemers.org/srfi-88/srfi-88.html), Guile terms this a
+//    postfixed identifier; also supported by Kawa.
+
+keyword = @{
+    "#:" ~ identifier
+}
+
+
+// -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+
 //* Note that +i, -i and ⟨infnan⟩ below are exceptions to the ⟨peculiar identifier⟩ rule; they are parsed as numbers,
 //* not identifiers.
 
