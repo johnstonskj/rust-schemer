@@ -1,0 +1,3 @@
+
+(define (atom? obj)
+  (not (pair? obj))

@@ -13,6 +13,7 @@ keywords = ["language", "lisp", "scheme", "virtual"]
 publish = true
 
 [dependencies]
+lazy_static = "1.4.0"
 num = "0.4"
 pest = "2.1"
 pest_derive = "2.1"
@@ -20,6 +21,7 @@ rust_decimal = "1.15"
 schemer-lang = { version = "0.1", path = "../schemer-lang" }
 schemer-parse = { version = "0.1", path = "../schemer-parse" }
 pest_ascii_tree = "0.1"
+tracing = "0.1"
 
 [dev-dependencies]
 pretty_assertions = "0.7"

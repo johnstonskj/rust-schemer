@@ -11,7 +11,7 @@ use crate::forms::library::LibraryName;
 use crate::schemer::ID_LIB_SCHEMER;
 use schemer_lang::error::{Error, ErrorKind};
 use schemer_lang::eval::callable::Callable;
-use schemer_lang::eval::environment::Exports;
+use schemer_lang::eval::environment::{print, Exports};
 use schemer_lang::eval::forms::TYPE_NAME_FORM;
 use schemer_lang::eval::procedures::{TYPE_NAME_BUILTIN_PROCEDURE, TYPE_NAME_PROCEDURE};
 use schemer_lang::eval::{Environment, Expression, Procedure};
@@ -58,7 +58,7 @@ fn print_current_environment(
     _: Vec<Expression>,
     env: &mut MutableRef<Environment>,
 ) -> Result<Expression, Error> {
-    env.borrow().print();
+    print(&env.borrow());
     Ok(etrue!())
 }
 

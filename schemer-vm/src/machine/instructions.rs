@@ -8,12 +8,13 @@ More detailed description, with
 */
 
 use crate::error::{Error, ErrorKind};
+use crate::instructions::C;
+use crate::instructions::{register_operation, Cell, MACHINE_CONTINUE, MACHINE_HALT};
+use crate::machine::Machine;
 use schemer_lang::read::datum::Datum;
-use schemer_lang::types::{Identifier, SchemeRepr};
-use std::collections::LinkedList;
+use schemer_lang::types::{Identifier, Number, SchemeRepr};
 use std::convert::TryFrom;
 use std::fmt::{Display, Formatter};
-
 // ------------------------------------------------------------------------------------------------
 // Public Types
 // ------------------------------------------------------------------------------------------------
@@ -28,9 +29,9 @@ pub enum Instruction {
     /// (s, e, LDC.v.c^, d) => (v.s, e, c, d)
     LoadConstant(Datum),
     /// (v1.s, e, LD.v1.c^, d) => (v2.s, e, c, d)
-    Load(Identifier),
+    Load(usize, usize),
     /// (s, e, LDF.(args body).c^, d) => (((args body).e).s, e, c, d)
-    LoadFunction(Vec<Identifier>, LinkedList<Instruction>),
+    LoadFunction(Vec<Identifier>, Vec<Instruction>),
     /*
         ========== Function Application ==========
     */
@@ -55,8 +56,8 @@ pub enum Instruction {
     Mul,
     /// (v1.v2.s, e, DIV.c, d)  => (v.s, e, c, d)
     Div,
-    /// (v1.v2.s, e, MOD.c, d)  => (v.s, e, c, d)
-    Mod,
+    /// (v1.v2.s, e, REM.c, d)  => (v.s, e, c, d)
+    Rem,
     /*
         ========== Comparison Operations ==========
     */
@@ -113,7 +114,7 @@ pub enum InstructionType {
     Sub = 0x22,
     Mul = 0x23,
     Div = 0x24,
-    Mod = 0x25,
+    Rem = 0x25,
     Equal = 0x31,
     NotEqual = 0x32,
     LessThan = 0x33,
@@ -138,6 +139,23 @@ pub enum InstructionType {
 // Public Functions
 // ------------------------------------------------------------------------------------------------
 
+pub fn register_operations() -> Result<(), Error> {
+    register_operation(0x00, "NIL", 0, &do_nil)?;
+    register_operation(0x01, "LDC", 0, &do_load_constant)?;
+    register_operation(0x02, "LD", 0, &do_load)?;
+    register_operation(0x03, "LDF", 0, &do_load_function)?;
+    register_operation(0x11, "AP", 0, &do_apply)?;
+    register_operation(0x12, "RTN", 0, &do_return)?;
+    register_operation(0x13, "DUM", 0, &do_dummy)?;
+    register_operation(0x14, "RAP", 0, &do_recursive_apply)?;
+    register_operation(0x21, "ADD", 0, &do_add)?;
+    register_operation(0x22, "SUB", 0, &do_sub)?;
+    register_operation(0x23, "MUL", 0, &do_mul)?;
+    register_operation(0x24, "DIV", 0, &do_div)?;
+    register_operation(0x25, "REM", 0, &do_rem)?;
+    Ok(())
+}
+
 // ------------------------------------------------------------------------------------------------
 // Implementations
 // ------------------------------------------------------------------------------------------------
@@ -150,7 +168,7 @@ impl Display for Instruction {
             match self {
                 Instruction::Nil => "NIL".to_string(),
                 Instruction::LoadConstant(v) => format!("LDC {}", v.to_repr_string()),
-                Instruction::Load(v) => format!("LD {}", v.to_repr_string()),
+                Instruction::Load(depth, index) => format!("LD ({} {})", depth, index),
                 Instruction::LoadFunction(args, body) => format!(
                     "LDF ({}) ({})",
                     args.iter()
@@ -170,7 +188,7 @@ impl Display for Instruction {
                 Instruction::Sub => "SUB".to_string(),
                 Instruction::Mul => "MUL".to_string(),
                 Instruction::Div => "DIV".to_string(),
-                Instruction::Mod => "MOD".to_string(),
+                Instruction::Rem => "REM".to_string(),
                 Instruction::Equal => "EQ".to_string(),
                 Instruction::NotEqual => "NEQ".to_string(),
                 Instruction::LessThan => "LT".to_string(),
@@ -191,87 +209,215 @@ impl Display for Instruction {
 }
 
 // ------------------------------------------------------------------------------------------------
-
-impl TryFrom<u8> for InstructionType {
-    type Error = Error;
-
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        match value {
-            0x00 => Ok(Self::Nil),
-            0x01 => Ok(Self::LoadConstant),
-            0x02 => Ok(Self::Load),
-            0x03 => Ok(Self::LoadFunction),
-            0x11 => Ok(Self::Apply),
-            0x12 => Ok(Self::Return),
-            0x13 => Ok(Self::Dummy),
-            0x14 => Ok(Self::RecursiveApply),
-            0x21 => Ok(Self::Add),
-            0x22 => Ok(Self::Sub),
-            0x23 => Ok(Self::Mul),
-            0x24 => Ok(Self::Div),
-            0x25 => Ok(Self::Mod),
-            0x31 => Ok(Self::Equal),
-            0x32 => Ok(Self::NotEqual),
-            0x33 => Ok(Self::LessThan),
-            0x34 => Ok(Self::LessOrEqual),
-            0x35 => Ok(Self::GreaterThan),
-            0x36 => Ok(Self::GreaterOrEqual),
-            0x41 => Ok(Self::Cons),
-            0x42 => Ok(Self::Car),
-            0x43 => Ok(Self::Cdr),
-            0x51 => Ok(Self::IsAtom),
-            0x52 => Ok(Self::IsNull),
-            0x61 => Ok(Self::Select),
-            0x71 => Ok(Self::Join),
-            0xFF => Ok(Self::Stop),
-            _ => Err(ErrorKind::Format.into()),
-        }
-    }
-}
-
-impl From<&Instruction> for InstructionType {
-    fn from(v: &Instruction) -> Self {
-        match v {
-            Instruction::Nil => Self::Nil,
-            Instruction::Load(_) => Self::Load,
-            Instruction::LoadConstant(_) => Self::LoadConstant,
-            Instruction::LoadFunction(_, _) => Self::LoadFunction,
-            Instruction::Apply => Self::Apply,
-            Instruction::Return => Self::Return,
-            Instruction::Dummy => Self::Dummy,
-            Instruction::RecursiveApply => Self::RecursiveApply,
-            Instruction::Add => Self::Add,
-            Instruction::Sub => Self::Sub,
-            Instruction::Mul => Self::Mul,
-            Instruction::Div => Self::Div,
-            Instruction::Mod => Self::Mod,
-            Instruction::Equal => Self::Equal,
-            Instruction::NotEqual => Self::NotEqual,
-            Instruction::LessThan => Self::LessThan,
-            Instruction::LessOrEqual => Self::LessOrEqual,
-            Instruction::GreaterThan => Self::GreaterThan,
-            Instruction::GreaterOrEqual => Self::GreaterOrEqual,
-            Instruction::Cons => Self::Cons,
-            Instruction::Car => Self::Car,
-            Instruction::Cdr => Self::Cdr,
-            Instruction::IsAtom => Self::IsAtom,
-            Instruction::IsNull => Self::IsNull,
-            Instruction::Select => Self::Select,
-            Instruction::Join => Self::Join,
-            Instruction::Stop => Self::Stop,
-        }
-    }
-}
-
-impl From<Instruction> for InstructionType {
-    fn from(v: Instruction) -> Self {
-        InstructionType::from(&v)
-    }
-}
-
-// ------------------------------------------------------------------------------------------------
 // Private Functions
 // ------------------------------------------------------------------------------------------------
+
+#[instrument(level = "trace")]
+fn stack_push(machine: &mut dyn Machine, data: Option<Cell>) {
+    machine.current_state.stack.push(value);
+}
+
+#[instrument(level = "trace")]
+fn stack_pop(machine: &mut dyn Machine, data: Option<Cell>) -> Cell {
+    machine.current_state.stack.pop().unwrap()
+}
+
+#[instrument(level = "trace")]
+fn do_nil(machine: &mut dyn Machine, data: Option<Cell>) -> Result<bool, Error> {
+    // pushes a nil pointer onto the stack
+    machine.stack_push(Cell::Datum(Datum::Null));
+    Ok(MACHINE_CONTINUE)
+}
+
+#[instrument(level = "trace")]
+fn do_load_constant(machine: &mut dyn Machine, data: Option<Cell>) -> Result<bool, Error> {
+    // pushes a constant argument onto the stack
+    machine.stack_push(Cell::Datum(value));
+    Ok(MACHINE_CONTINUE)
+}
+
+#[instrument(level = "trace")]
+fn do_load(machine: &mut dyn Machine, data: Option<Cell>) -> Result<bool, Error> {
+    // pushes the value of a variable onto the stack. The variable is indicated by the argument,
+    // a pair. The pair's car specifies the level, the cdr the position. So (1 . 3) gives the
+    // current function's (level 1) third parameter
+    if let Some(state) = machine.dump.get(machine.dump.len() - depth) {
+        if let Some(value) = state.environment.get(index) {
+            machine.stack_push(value.clone());
+            return Ok(MACHINE_CONTINUE);
+        }
+    }
+    Err(ErrorKind::InvalidEnvironmentIndex(depth, index).into())
+}
+
+#[instrument(level = "trace")]
+fn do_load_function(machine: &mut dyn Machine, data: Option<Cell>) -> Result<bool, Error> {
+    // takes one list argument representing a function. It constructs a closure (a pair
+    // containing the function and the current environment) and pushes that onto the stack
+    machine.stack_push(Cell::Closure(args, body));
+    Ok(MACHINE_CONTINUE)
+}
+
+#[instrument(level = "trace")]
+fn do_apply(machine: &mut dyn Machine, data: Option<Cell>) -> Result<bool, Error> {
+    // pops a closure and a list of parameter values from the stack. The closure is applied to
+    // the parameters by installing its environment as the current one, pushing the parameter
+    // list in front of that, clearing the stack, and setting C to the closure's function
+    // pointer. The previous values of S, E, and the next value of C are saved on the dump.
+    todo!()
+}
+
+#[instrument(level = "trace")]
+fn do_return(machine: &mut dyn Machine, data: Option<Cell>) -> Result<bool, Error> {
+    // pops one return value from the stack, restores S, E, and C from the dump, and pushes the
+    // return value onto the now-current stack
+    let ret_value = machine.stack_pop();
+    let _ = machine.current_state.pop();
+    machine.stack_push(ret_value);
+    Ok(MACHINE_CONTINUE)
+}
+
+#[instrument(level = "trace")]
+fn do_dummy(machine: &mut dyn Machine, data: Option<Cell>) -> Result<bool, Error> {
+    // pushes a "dummy", an empty list, in front of the environment list
+    todo!()
+}
+
+#[instrument(level = "trace")]
+fn do_recursive_apply(
+    machine: &mut dyn Machine,
+    data: Option<Cell>,
+) -> Result<Option<Self>, Error> {
+    // works like apply, only that it replaces an occurrence of a dummy environment with the
+    // current one, thus making recursive functions possible
+    todo!()
+}
+
+#[instrument(level = "trace")]
+fn do_select(machine: &mut dyn Machine, data: Option<Cell>) -> Result<bool, Error> {
+    // expects two list arguments, and pops a value from the stack. The first list is executed
+    // if the popped value was non-nil, the second list otherwise. Before one of these list
+    // pointers is made the new C, a pointer to the instruction following sel is saved on the
+    // dump
+    todo!()
+}
+
+#[instrument(level = "trace")]
+fn do_join(machine: &mut dyn Machine, data: Option<Cell>) -> Result<bool, Error> {
+    // pops a list reference from the dump and makes this the new value of C. This instruction
+    // occurs at the end of both alternatives of a sel.
+    todo!()
+}
+
+#[instrument(level = "trace")]
+fn do_numeric_binary_op(
+    machine: &mut dyn Machine,
+    op: impl Fn(Number, Number) -> Number,
+) -> Result<bool, Error> {
+    if machine.stack_depth() < 2 {
+        Err(ErrorKind::InsufficientStack(2).into())
+    } else {
+        let rhs = machine.stack_pop();
+        let rhs = if let Cell::Datum(Datum::Number(value)) = rhs {
+            value
+        } else {
+            return Err(ErrorKind::TypeMismatch("Number".to_string(), cell_type_name(&rhs)).into());
+        };
+        let lhs = machine.stack_pop();
+        let lhs = if let Cell::Datum(Datum::Number(value)) = lhs {
+            value
+        } else {
+            return Err(ErrorKind::TypeMismatch("Number".to_string(), cell_type_name(&lhs)).into());
+        };
+        let result = op(lhs, rhs);
+        machine.stack_push(Cell::Datum(Datum::Number(result)));
+        Ok(MACHINE_CONTINUE)
+    }
+}
+
+#[instrument(level = "trace")]
+fn do_add(machine: &mut dyn Machine, data: Option<Cell>) -> Result<bool, Error> {
+    do_numeric_binary_op(machine, Number::add)
+}
+
+#[instrument(level = "trace")]
+fn do_sub(machine: &mut dyn Machine, data: Option<Cell>) -> Result<bool, Error> {
+    do_numeric_binary_op(machine, Number::sub)
+}
+
+#[instrument(level = "trace")]
+fn do_mul(machine: &mut dyn Machine, data: Option<Cell>) -> Result<bool, Error> {
+    do_numeric_binary_op(machine, Number::mul)
+}
+
+#[instrument(level = "trace")]
+fn do_div(machine: &mut dyn Machine, data: Option<Cell>) -> Result<bool, Error> {
+    do_numeric_binary_op(machine, Number::div)
+}
+
+#[instrument(level = "trace")]
+fn do_rem(machine: &mut dyn Machine, data: Option<Cell>) -> Result<bool, Error> {
+    do_numeric_binary_op(machine, Number::rem)
+}
+
+#[instrument(level = "trace")]
+fn do_equal(machine: &mut dyn Machine, data: Option<Cell>) -> Result<bool, Error> {
+    todo!()
+}
+
+#[instrument(level = "trace")]
+fn do_not_equal(machine: &mut dyn Machine, data: Option<Cell>) -> Result<bool, Error> {
+    todo!()
+}
+
+#[instrument(level = "trace")]
+fn do_less_than(machine: &mut dyn Machine, data: Option<Cell>) -> Result<bool, Error> {
+    todo!()
+}
+
+#[instrument(level = "trace")]
+fn do_less_or_equal(machine: &mut dyn Machine, data: Option<Cell>) -> Result<bool, Error> {
+    todo!()
+}
+
+#[instrument(level = "trace")]
+fn do_greater_than(machine: &mut dyn Machine, data: Option<Cell>) -> Result<bool, Error> {
+    todo!()
+}
+
+#[instrument(level = "trace")]
+fn do_greater_or_equal(machine: &mut dyn Machine, data: Option<Cell>) -> Result<bool, Error> {
+    todo!()
+}
+
+#[instrument(level = "trace")]
+fn do_cons(machine: &mut dyn Machine, data: Option<Cell>) -> Result<bool, Error> {
+    todo!()
+}
+
+#[instrument(level = "trace")]
+fn do_car(machine: &mut dyn Machine, data: Option<Cell>) -> Result<bool, Error> {
+    todo!()
+}
+
+#[instrument(level = "trace")]
+fn do_cdr(machine: &mut dyn Machine, data: Option<Cell>) -> Result<bool, Error> {
+    todo!()
+}
+
+#[instrument(level = "trace")]
+fn do_is_atom(machine: &mut dyn Machine, data: Option<Cell>) -> Result<bool, Error> {
+    todo!()
+}
+
+#[instrument(level = "trace")]
+fn do_is_null(machine: &mut dyn Machine, data: Option<Cell>) -> Result<bool, Error> {
+    todo!()
+}
+
+fn do_stop(_: &mut dyn Machine, _: Option<Cell>) -> Result<bool, Error> {
+    Ok(MACHINE_HALT)
+}
 
 // ------------------------------------------------------------------------------------------------
 // Modules

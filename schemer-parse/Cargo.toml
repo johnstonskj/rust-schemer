@@ -21,6 +21,7 @@ pest_derive = "2.1"
 rust_decimal = "1.15"
 schemer-lang = { version = "0.1", path = "../schemer-lang" }
 pest_ascii_tree = "0.1"
+tracing = "0.1"
 
 [dev-dependencies]
 pretty_assertions = "1.0"

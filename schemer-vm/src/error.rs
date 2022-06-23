@@ -7,6 +7,7 @@ More detailed description, with
 
 */
 
+use schemer_lang::types::{Identifier, SchemeRepr};
 use std::error::Error as StdError;
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
@@ -28,7 +29,15 @@ pub enum ErrorKind {
     FileHeader,
     ReadWrite,
     Format,
+    InvalidOperationRegistration,
+    InvalidOpCode(u8),
+    InvalidOpName(String),
     VersionMismatch(u8, u8),
+    InvalidEnvironmentIndex(usize, usize),
+    MissingBinding(Identifier),
+    InvalidCodePointer(usize),
+    InsufficientStack(usize),
+    TypeMismatch(String, String),
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -114,10 +123,37 @@ impl Display for ErrorKind {
                 Self::FileHeader => "File does not contain a valid header.".to_string(),
                 Self::ReadWrite => "An error occurred reading or writing".to_string(),
                 Self::Format => "An error occurred formatting output".to_string(),
+                Self::InvalidOperationRegistration => "Unable to register operation".to_string(),
+                ErrorKind::InvalidOpCode(op_code) => format!("Invalid op-code value: {}", op_code),
+                ErrorKind::InvalidOpName(op_name) => format!("Invalid op-name value: {}", op_name),
                 Self::VersionMismatch(found, expecting) => format!(
                     "File version mismatch, found {}, expecting <= {}.",
                     found, expecting
                 ),
+                ErrorKind::MissingBinding(id) => {
+                    format!("No value bound to identifier '{}'", id.to_repr_string())
+                }
+                ErrorKind::InvalidCodePointer(ptr) => {
+                    format!("Code pointer value {} is invalid", ptr)
+                }
+                ErrorKind::InsufficientStack(require) => {
+                    format!(
+                        "Stack size insufficient for operation, require >= {}",
+                        require
+                    )
+                }
+                ErrorKind::TypeMismatch(expecting, received) => {
+                    format!(
+                        "Type mismatch, expecting {}, received {}",
+                        expecting, received
+                    )
+                }
+                ErrorKind::InvalidEnvironmentIndex(depth, index) => {
+                    format!(
+                        "Invalid environment index, no such value; depth: {}, index: {}",
+                        depth, index
+                    )
+                }
             }
         )
     }

@@ -1,0 +1,27 @@
+(library (scheme lazy)
+  (export
+    make-promise
+    promise?
+    delay
+    delay-force
+    force)
+
+(define *promise-type* (gen-sym))
+
+(define (make-promise thunk)
+  )
+
+(define (promise? obj)
+  )
+
+(define (delay thunk)
+  )
+
+(define (delay-force thunk)
+                      )
+
+
+(define (force thunk)
+                )
+
+

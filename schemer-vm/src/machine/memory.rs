@@ -68,18 +68,22 @@ impl Memory {
         file_header.validate(FileType::Image, VM_CURRENT_VERSION)?;
         Ok(Self(reader.bytes(data_bytes)?.unwrap()))
     }
+
     pub fn save_to_image<T: AsRef<Path>>(&self, file_name: &T) -> Result<(), Error> {
         let mut file = File::create(file_name)?;
         let mut writer = Writer::wrap(&mut file);
         writer.file_header(FileHeader::new(FileType::Image))?;
         writer.bytes(&self.0)
     }
+
     pub fn len(&self) -> usize {
         self.0.len()
     }
+
     pub fn as_vec(&self) -> &Vec<u8> {
         self.0.as_ref()
     }
+
     pub fn as_slice(&self) -> &[u8] {
         self.0.as_slice()
     }

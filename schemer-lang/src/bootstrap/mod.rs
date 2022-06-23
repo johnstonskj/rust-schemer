@@ -7,11 +7,9 @@ More detailed description, with
 
 */
 
-#[macro_use]
-extern crate lazy_static;
-
-#[macro_use]
-extern crate pest_derive;
+use crate::error::Error;
+use crate::eval::Environment;
+use crate::types::MutableRef;
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
@@ -21,9 +19,17 @@ extern crate pest_derive;
 // Private Types
 // ------------------------------------------------------------------------------------------------
 
+//const PREDICATE_SRC: &str = include_str!("predicates.scr");
+
 // ------------------------------------------------------------------------------------------------
 // Public Functions
 // ------------------------------------------------------------------------------------------------
+
+pub fn bootstrap() -> Result<MutableRef<Environment>, Error> {
+    let env = MutableRef::from(Environment::top());
+
+    Ok(env)
+}
 
 // ------------------------------------------------------------------------------------------------
 // Implementations
@@ -36,11 +42,3 @@ extern crate pest_derive;
 // ------------------------------------------------------------------------------------------------
 // Modules
 // ------------------------------------------------------------------------------------------------
-
-pub mod error;
-
-pub mod file;
-
-pub mod instructions;
-
-pub mod machine;

@@ -20,6 +20,7 @@ rust_decimal = "1.15"
 schemer-macros = { version = "0.1", path = "../schemer-macros" }
 unique_id = "0.1"
 unic-ucd-name = "0.9"
+tracing = "0.1"
 
 [dev-dependencies]
 pretty_assertions = "1.0"

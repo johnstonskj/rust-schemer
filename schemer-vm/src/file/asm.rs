@@ -17,7 +17,6 @@ use schemer_lang::types::{
     Boolean, ByteVector, Char, ExactComplex, ExactReal, Identifier, InexactComplex, InexactReal,
     Integer, Number, Pair, Rational, SchemeString, Vector,
 };
-use std::collections::LinkedList;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::Path;
@@ -26,6 +25,7 @@ use std::path::Path;
 // Public Types
 // ------------------------------------------------------------------------------------------------
 
+#[instrument]
 pub fn assemble_into_file<T: AsRef<Path>>(
     byte_code: &[Instruction],
     file_name: &T,
@@ -37,6 +37,7 @@ pub fn assemble_into_file<T: AsRef<Path>>(
     assemble(&mut writer, byte_code)
 }
 
+#[instrument]
 pub fn assemble_into(instructions: &[Instruction]) -> Result<Vec<u8>, Error> {
     let mut inner = BufWriter::new(Vec::new());
     let mut writer = Writer::wrap(&mut inner);
@@ -47,6 +48,7 @@ pub fn assemble_into(instructions: &[Instruction]) -> Result<Vec<u8>, Error> {
     Ok(inner.into_inner().unwrap())
 }
 
+#[instrument]
 fn assemble<W: Write>(writer: &mut Writer<W>, instructions: &[Instruction]) -> Result<(), Error> {
     for instruction in instructions {
         write_instruction(writer, instruction)?;
@@ -76,15 +78,16 @@ fn write_instruction<W: Write>(
 ) -> Result<(), Error> {
     match instruction {
         Instruction::LoadConstant(v) => write_load_constant(writer, v),
-        Instruction::Load(id) => write_load(writer, id),
+        Instruction::Load(depth, index) => write_load(writer, *depth, *index),
         Instruction::LoadFunction(args, body) => write_load_function(writer, args, body),
         i => writer.instruction_type(i.into()),
     }
 }
 
-fn write_load<W: Write>(writer: &mut Writer<W>, id: &Identifier) -> Result<(), Error> {
+fn write_load<W: Write>(writer: &mut Writer<W>, depth: usize, index: usize) -> Result<(), Error> {
     writer.instruction_type(InstructionType::Load)?;
-    writer.string(id.as_str())
+    writer.usize(depth)?;
+    writer.usize(index)
 }
 
 fn write_identifier<W: Write>(writer: &mut Writer<W>, id: &Identifier) -> Result<(), Error> {
@@ -236,7 +239,7 @@ fn write_datum_byte_vector<W: Write>(
 fn write_load_function<W: Write>(
     writer: &mut Writer<W>,
     args: &Vec<Identifier>,
-    body: &LinkedList<Instruction>,
+    body: &Vec<Instruction>,
 ) -> Result<(), Error> {
     writer.instruction_type(InstructionType::LoadFunction)?;
 

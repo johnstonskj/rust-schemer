@@ -36,7 +36,7 @@ simple_instruction = {
 }
 
 load_instruction = {
-    "LD" ~ symbol
+    "LD" ~ "(" ~ uinteger_10 ~ uinteger_10 ~ ")"
 }
 
 load_constant_instruction = {
@@ -44,7 +44,15 @@ load_constant_instruction = {
 }
 
 load_function_instruction = {
-    "LDF" ~ list ~ list
+    "LDF" ~ "(" ~ load_function_args ~ load_function_body ~ ")"
+}
+
+load_function_args = {
+    "(" ~ identifier* ~ ")"
+}
+
+load_function_body = {
+    "(" ~ instruction* ~ ")"
 }
 
 // -*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
@@ -674,29 +682,19 @@ datum = {
 //     | ⟨character⟩ | ⟨string⟩ | ⟨symbol⟩ | ⟨bytevector⟩
 
 simple_datum = _{
-    boolean | number | character | string | symbol | byte_vector
-}
-
-// ⟨symbol⟩ −→ ⟨identifier⟩
-
-symbol = {
-    identifier
+    boolean | number | character | string | identifier | byte_vector
 }
 
 // ⟨compound datum⟩ −→ ⟨list⟩ | ⟨vector⟩
 
 compound_datum = _{
-    list | pair | vector
+    list | vector
 }
 
 // ⟨list⟩ −→ (⟨datum⟩*) | (⟨datum⟩+ . ⟨datum⟩)
 
 list = {
     "(" ~ datum* ~ ")"
-}
-
-pair = {
-    "(" ~ datum+ ~ "." ~ datum ~ ")"
 }
 
 // ⟨abbreviation⟩ −→ ⟨abbrev prefix⟩ ⟨datum⟩

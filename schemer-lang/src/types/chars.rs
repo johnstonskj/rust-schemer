@@ -12,6 +12,8 @@ use crate::eval::{Environment, Evaluate, Expression};
 use crate::read::syntax_str::{SYNTAX_CHAR_PREFIX, SYNTAX_HEX_CHAR_PREFIX};
 use crate::types::new_type::NewType;
 use crate::types::{MutableRef, SchemeRepr, SchemeValue};
+use std::convert::TryFrom;
+use std::fmt::{Debug, Formatter};
 use unic_ucd_name::Name;
 
 // ------------------------------------------------------------------------------------------------
@@ -20,7 +22,8 @@ use unic_ucd_name::Name;
 
 pub type Char = NewType<char>;
 
-pub const CODE_POINT_ERROR: u32 = u32::MAX;
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
+pub struct Codepoint(u32);
 
 pub const CHAR_NAME_ALARM: &str = "alarm";
 pub const CHAR_NAME_BACKSPACE: &str = "backspace";
@@ -76,7 +79,7 @@ impl Char {
             Err(Error::from(ErrorKind::UnexpectedValue {
                 type_name: TYPE_NAME_CHAR.to_string(),
                 actual: format!("{}{:X}", SYNTAX_HEX_CHAR_PREFIX, c),
-                expected: "valid Unicode codepoint".to_string(),
+                expected: TYPE_NAME_CODEPOINT.to_string(),
             }))
         } else {
             char::from_u32(c)
@@ -182,6 +185,88 @@ impl Char {
         }
     }
 }
+
+// ------------------------------------------------------------------------------------------------
+
+scheme_value!(Codepoint, TYPE_NAME_CODEPOINT, "unicode-codepoint");
+
+impl Debug for Codepoint {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "\\U+{:04X}", self.0)
+    }
+}
+
+impl From<Codepoint> for u32 {
+    fn from(cp: Codepoint) -> Self {
+        cp.0
+    }
+}
+
+impl TryFrom<u32> for Codepoint {
+    type Error = Error;
+
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        if value < MAX_VALID_CODEPOINT.into() {
+            Ok(Self(value))
+        } else {
+            Err(ErrorKind::UnexpectedValue {
+                type_name: TYPE_NAME_CODEPOINT.to_string(),
+                expected: "".to_string(),
+                actual: value.to_string(),
+            }
+            .into())
+        }
+    }
+}
+
+impl From<Char> for Codepoint {
+    fn from(value: Char) -> Self {
+        Self(value.into_inner() as u32)
+    }
+}
+
+impl TryFrom<Codepoint> for Char {
+    type Error = Error;
+
+    fn try_from(value: Codepoint) -> Result<Self, Self::Error> {
+        match value.0 {
+            0xD7FF..=0xE000
+            | 0xFDD0..=0xFDEF
+            | 0xFFFE..=0xFFFF
+            | 0x1FFFE..=0x1FFFF
+            | 0x2FFFE..=0x2FFFF
+            | 0x3FFFE..=0x3FFFF
+            | 0x4FFFE..=0x4FFFF
+            | 0x5FFFE..=0x5FFFF
+            | 0x6FFFE..=0x6FFFF
+            | 0x7FFFE..=0x7FFFF
+            | 0x8FFFE..=0x8FFFF
+            | 0x9FFFE..=0x9FFFF
+            | 0x10FFFE..=0x10FFFF => Err(ErrorKind::UnexpectedValue {
+                type_name: TYPE_NAME_CODEPOINT.to_string(),
+                expected: "".to_string(),
+                actual: value.to_repr_string(),
+            }
+            .into()),
+            _ => Ok(Char::from(char::from_u32(value.0).unwrap())),
+        }
+    }
+}
+
+impl SchemeRepr for Codepoint {
+    fn to_repr_string(&self) -> String {
+        format!("#x{:04X}", self.0)
+    }
+}
+
+impl Evaluate for Codepoint {
+    fn eval(&self, _: &mut MutableRef<Environment>) -> Result<Expression, Error> {
+        Ok(Expression::Character(Char::try_from(*self)?))
+    }
+}
+
+pub const MAX_VALID_CODEPOINT: Codepoint = Codepoint(0x10FFFE);
+pub const INVALID_CODEPOINT_VALUE: Codepoint = Codepoint(u32::MAX);
 
 // ------------------------------------------------------------------------------------------------
 // Private Functions

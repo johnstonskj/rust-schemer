@@ -14,7 +14,7 @@ use pest::iterators::Pair;
 use pest::Parser;
 use schemer_lang::error::{Error, ErrorKind};
 use schemer_lang::parameters::{get_global_flag, DEBUG_SHOW_TOKEN_TREE};
-use schemer_lang::read::datum::{Abbreviation, Datum};
+use schemer_lang::read::datum::Datum;
 use schemer_lang::types::numbers::conv::{
     exact_to_inexact, inexact_complex_to_exact_complex, integer_to_inexact_real,
     rational_to_inexact_real,
@@ -22,7 +22,7 @@ use schemer_lang::types::numbers::conv::{
 use schemer_lang::types::numbers::{TYPE_NAME_EXACT_REAL, TYPE_NAME_INTEGER};
 use schemer_lang::types::{
     lists::vector_to_list, ExactReal, Identifier, InexactComplex, InexactReal, InfNan, Integer,
-    Number, Pair as DatumPair, Rational, Ref, SchemeString, Vector,
+    Number, Rational, Ref, SchemeString, Vector,
 };
 use schemer_parse::from_str::{string_to_boolean, string_to_char};
 use std::convert::TryFrom;
@@ -84,6 +84,7 @@ macro_rules! unexpected_input {
 // Public Functions
 // ------------------------------------------------------------------------------------------------
 
+#[instrument]
 pub fn parse_instructions_str(source: &str) -> Result<Vec<Instruction>, Error> {
     println!("parse_instructions_str");
     let mut parsed = SimpleSyntax::parse(Rule::instruction_data, source).map_err(|e| {
@@ -152,6 +153,7 @@ where
 // Private Functions
 // ------------------------------------------------------------------------------------------------
 
+#[instrument(level = "trace")]
 fn parse_number(input_pair: Pair<'_, Rule>) -> Result<Number, Error> {
     let mut radix = 10;
     let mut exact: Option<bool> = None;
@@ -223,6 +225,7 @@ fn parse_number(input_pair: Pair<'_, Rule>) -> Result<Number, Error> {
     unreachable!()
 }
 
+#[instrument(level = "trace")]
 fn parse_polar_complex_number(
     input_pair: Pair<'_, Rule>,
     radix: u32,
@@ -260,6 +263,7 @@ fn parse_polar_complex_number(
     .into())
 }
 
+#[instrument(level = "trace")]
 fn parse_cartesian_complex_number(
     input_pair: Pair<'_, Rule>,
     radix: u32,
@@ -348,6 +352,7 @@ fn parse_cartesian_complex_number(
     }
 }
 
+#[instrument(level = "trace")]
 fn parse_real_number(
     input_pair: Pair<'_, Rule>,
     radix: u32,
@@ -368,6 +373,7 @@ fn parse_real_number(
     }
 }
 
+#[instrument(level = "trace")]
 fn parse_rational_number(
     input_pair: Pair<'_, Rule>,
     radix: u32,
@@ -386,6 +392,7 @@ fn parse_rational_number(
     Ok(Rational::new(n, d))
 }
 
+#[instrument(level = "trace")]
 fn parse_integer_number(
     input_pair: Pair<'_, Rule>,
     radix: u32,
@@ -410,6 +417,7 @@ fn parse_integer_number(
     })
 }
 
+#[instrument(level = "trace")]
 fn parse_decimal_number(input_pair: Pair<'_, Rule>, negative: bool) -> Result<ExactReal, Error> {
     let mut pre = String::from("0");
     let mut post = String::from("0");
@@ -453,76 +461,89 @@ fn parse_decimal_number(input_pair: Pair<'_, Rule>, negative: bool) -> Result<Ex
     })
 }
 
+#[instrument(level = "trace")]
 fn parse_instruction_data(input_pair: Pair<'_, Rule>) -> Result<Vec<Instruction>, Error> {
     println!(
         "parse_instruction_data(<{:?},{:?}>)",
         input_pair.as_rule(),
         input_pair.as_str()
     );
-    let mut instructions: Vec<Instruction> = Default::default();
     match input_pair.as_rule() {
-        Rule::instruction_data => {
-            for inner_pair in input_pair.into_inner() {
-                println!(
-                    "parse_instruction_data => (<{:?},{:?}>)",
-                    inner_pair.as_rule(),
-                    inner_pair.as_str()
-                );
-                match inner_pair.as_rule() {
-                    Rule::simple_instruction => {
-                        instructions.push(match inner_pair.as_str() {
-                            "NIL" => Instruction::Nil,
-                            "AP" => Instruction::Apply,
-                            "RTN" => Instruction::Return,
-                            "DUM" => Instruction::Dummy,
-                            "RAP" => Instruction::RecursiveApply,
-                            "ADD" => Instruction::Add,
-                            "SUB" => Instruction::Sub,
-                            "MUL" => Instruction::Mul,
-                            "DIV" => Instruction::Div,
-                            "MOD" => Instruction::Mod,
-                            "EQ" => Instruction::Equal,
-                            "NEQ" => Instruction::NotEqual,
-                            "LT" => Instruction::LessThan,
-                            "LEQ" => Instruction::LessOrEqual,
-                            "GT" => Instruction::GreaterThan,
-                            "GEQ" => Instruction::GreaterOrEqual,
-                            "CONS" => Instruction::Cons,
-                            "CAR" => Instruction::Car,
-                            "CDR" => Instruction::Cdr,
-                            "ATOM" => Instruction::IsAtom,
-                            "NULL" => Instruction::IsNull,
-                            "SEL" => Instruction::Select,
-                            "JOIN" => Instruction::Join,
-                            "STOP" => Instruction::Stop,
-                            _ => unexpected_input!(inner_pair),
-                        });
-                    }
-                    Rule::load_instruction => {
-                        if let Some(symbol_pair) = inner_pair.into_inner().next() {
-                            instructions.push(Instruction::Load(Identifier::from_str_unchecked(
-                                symbol_pair.as_str(),
-                            )));
-                        } else {
-                            unimplemented!()
-                        }
-                    }
-                    Rule::load_constant_instruction => {
-                        instructions.push(Instruction::LoadConstant(parse_datum(
-                            inner_pair.into_inner().next().unwrap(),
-                        )?))
-                    }
-                    Rule::load_function_instruction => {}
-                    Rule::EOI => {}
-                    _ => unexpected_input!(inner_pair),
-                }
-            }
-        }
+        Rule::instruction_data => parse_instructions(input_pair),
         _ => unexpected_input!(input_pair),
     }
+}
+
+#[instrument(level = "trace")]
+fn parse_instructions(input_pair: Pair<'_, Rule>) -> Result<Vec<Instruction>, Error> {
+    println!(
+        "parse_instructions(<{:?},{:?}>)",
+        input_pair.as_rule(),
+        input_pair.as_str()
+    );
+    let mut instructions: Vec<Instruction> = Default::default();
+    for inner_pair in input_pair.into_inner() {
+        println!(
+            "parse_instruction_data => (<{:?},{:?}>)",
+            inner_pair.as_rule(),
+            inner_pair.as_str()
+        );
+        match inner_pair.as_rule() {
+            Rule::simple_instruction => {
+                instructions.push(match inner_pair.as_str() {
+                    "NIL" => Instruction::Nil,
+                    "AP" => Instruction::Apply,
+                    "RTN" => Instruction::Return,
+                    "DUM" => Instruction::Dummy,
+                    "RAP" => Instruction::RecursiveApply,
+                    "ADD" => Instruction::Add,
+                    "SUB" => Instruction::Sub,
+                    "MUL" => Instruction::Mul,
+                    "DIV" => Instruction::Div,
+                    "MOD" => Instruction::Rem,
+                    "EQ" => Instruction::Equal,
+                    "NEQ" => Instruction::NotEqual,
+                    "LT" => Instruction::LessThan,
+                    "LEQ" => Instruction::LessOrEqual,
+                    "GT" => Instruction::GreaterThan,
+                    "GEQ" => Instruction::GreaterOrEqual,
+                    "CONS" => Instruction::Cons,
+                    "CAR" => Instruction::Car,
+                    "CDR" => Instruction::Cdr,
+                    "ATOM" => Instruction::IsAtom,
+                    "NULL" => Instruction::IsNull,
+                    "SEL" => Instruction::Select,
+                    "JOIN" => Instruction::Join,
+                    "STOP" => Instruction::Stop,
+                    _ => unexpected_input!(inner_pair),
+                });
+            }
+            Rule::load_instruction => {
+                let mut inner_pair = inner_pair.into_inner();
+                instructions.push(Instruction::Load(
+                    parse_integer_number(inner_pair.next().unwrap(), 10, false)? as usize,
+                    parse_integer_number(inner_pair.next().unwrap(), 10, false)? as usize,
+                ));
+            }
+            Rule::load_constant_instruction => instructions.push(Instruction::LoadConstant(
+                parse_datum(inner_pair.into_inner().next().unwrap())?,
+            )),
+            Rule::load_function_instruction => {
+                let mut inner_pair = inner_pair.into_inner();
+                instructions.push(Instruction::LoadFunction(
+                    parse_identifier_list(inner_pair.next().unwrap())?,
+                    parse_instructions(inner_pair.next().unwrap())?.into(),
+                ))
+            }
+            Rule::EOI => {}
+            _ => unexpected_input!(inner_pair),
+        }
+    }
+
     Ok(instructions)
 }
 
+#[instrument(level = "trace")]
 fn parse_maybe_datum(input_pair: Pair<'_, Rule>) -> Result<Option<Datum>, Error> {
     match input_pair.as_rule() {
         Rule::datum => Ok(Some(parse_datum_inner(input_pair)?)),
@@ -531,6 +552,7 @@ fn parse_maybe_datum(input_pair: Pair<'_, Rule>) -> Result<Option<Datum>, Error>
     }
 }
 
+#[instrument(level = "trace")]
 fn parse_datum(input_pair: Pair<'_, Rule>) -> Result<Datum, Error> {
     match input_pair.as_rule() {
         Rule::datum => parse_datum_inner(input_pair),
@@ -538,11 +560,12 @@ fn parse_datum(input_pair: Pair<'_, Rule>) -> Result<Datum, Error> {
     }
 }
 
+#[instrument(level = "trace")]
 fn parse_datum_inner(input_pair: Pair<'_, Rule>) -> Result<Datum, Error> {
     let mut inner_pairs = input_pair.into_inner();
     let input_pair = inner_pairs.next().unwrap();
     let datum: Datum = match input_pair.as_rule() {
-        Rule::symbol => {
+        Rule::identifier => {
             let symbol = Identifier::from_str_unchecked(input_pair.as_str());
             symbol.into()
         }
@@ -550,16 +573,15 @@ fn parse_datum_inner(input_pair: Pair<'_, Rule>) -> Result<Datum, Error> {
         Rule::number => parse_number(input_pair)?.simplify().into(),
         Rule::character => string_to_char(input_pair.as_str())?.into(),
         Rule::string => SchemeString::from_str(input_pair.as_str())?.into(),
-        Rule::pair => parse_pair(input_pair)?.into(),
         Rule::list => parse_list(input_pair)?.into(),
         Rule::vector => parse_vector(input_pair)?.into(),
-        Rule::abbreviation => parse_abbreviation(input_pair)?.into(),
         _ => unexpected_input!(input_pair),
     };
     assert!(inner_pairs.next().is_none());
     Ok(datum)
 }
 
+#[instrument(level = "trace")]
 fn parse_list(input_pair: Pair<'_, Rule>) -> Result<Datum, Error> {
     let mut list_data: Vec<Datum> = Vec::default();
     for inner_pair in input_pair.into_inner() {
@@ -571,26 +593,19 @@ fn parse_list(input_pair: Pair<'_, Rule>) -> Result<Datum, Error> {
     Ok(Datum::List(vector_to_list(Vector::from(list_data))))
 }
 
-fn parse_pair(input_pair: Pair<'_, Rule>) -> Result<DatumPair, Error> {
-    let mut data = Vec::new();
-    for next_pair in input_pair.into_inner() {
-        if next_pair.as_rule() == Rule::datum {
-            data.push(parse_datum_inner(next_pair)?)
-        } else {
-            unexpected_input!(next_pair);
+#[instrument(level = "trace")]
+fn parse_identifier_list(input_pair: Pair<'_, Rule>) -> Result<Vec<Identifier>, Error> {
+    let mut list_data: Vec<Identifier> = Vec::default();
+    for inner_pair in input_pair.into_inner() {
+        match inner_pair.as_rule() {
+            Rule::identifier => list_data.push(Identifier::from_str_unchecked(inner_pair.as_str())),
+            _ => unexpected_input!(inner_pair),
         }
     }
-
-    let cdr = data.remove(data.len() - 1);
-    let car = data.remove(data.len() - 1);
-    let mut head = DatumPair::cons(car.into(), cdr.into());
-
-    for datum in data.into_iter().rev() {
-        head = DatumPair::cons_list(Ref::new(datum), head);
-    }
-    Ok(head)
+    Ok(list_data)
 }
 
+#[instrument(level = "trace")]
 fn parse_vector(input_pair: Pair<'_, Rule>) -> Result<Datum, Error> {
     let mut vector: Vec<Ref<Datum>> = Vec::default();
     for inner_pair in input_pair.into_inner() {
@@ -600,21 +615,6 @@ fn parse_vector(input_pair: Pair<'_, Rule>) -> Result<Datum, Error> {
         }
     }
     Ok(Datum::Vector(Vector::from(vector)))
-}
-
-fn parse_abbreviation(input_pair: Pair<'_, Rule>) -> Result<Datum, Error> {
-    let mut inner_pairs = input_pair.into_inner();
-    let input_pair = inner_pairs.next().unwrap();
-    let abbreviation = match input_pair.as_rule() {
-        Rule::abbrev_prefix => Abbreviation::from_str(input_pair.as_str())?,
-        _ => unexpected_input!(input_pair),
-    };
-    let input_pair = inner_pairs.next().unwrap();
-    let datum = match input_pair.as_rule() {
-        Rule::datum => parse_datum_inner(input_pair)?,
-        _ => unexpected_input!(input_pair),
-    };
-    Ok(Datum::Abbreviation(abbreviation, Ref::new(datum)))
 }
 
 // ------------------------------------------------------------------------------------------------

@@ -1,7 +1,11 @@
-#[macro_use]
-extern crate log;
-
 use colored::Colorize;
+use human_panic::setup_panic;
+use i18n_embed::{
+    fluent::{fluent_language_loader, FluentLanguageLoader},
+    LanguageLoader,
+};
+use lazy_static::lazy_static;
+use rust_embed::RustEmbed;
 use rustyline::completion::{Completer, Pair};
 use rustyline::config::OutputStreamType;
 use rustyline::error::ReadlineError;
@@ -31,6 +35,9 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::{env, fs};
 use structopt::StructOpt;
+use tracing::info;
+use tracing_subscriber::filter::LevelFilter;
+use tracing_subscriber::EnvFilter;
 
 // ------------------------------------------------------------------------------------------------
 // REPL environment values
@@ -49,28 +56,50 @@ pub const REPL_PROMPT_COLOR_ID: &'static str = "schemer-repl-prompt-color";
 pub const REPL_PROMPT_COLOR_DEFAULT: &'static str = "bright green";
 
 // ------------------------------------------------------------------------------------------------
+// I18N translation
+// ------------------------------------------------------------------------------------------------
+
+macro_rules! fl {
+    ($message_id:literal) => {{
+        i18n_embed_fl::fl!($crate::LANGUAGE_LOADER, $message_id)
+    }};
+
+    ($message_id:literal, $($args:expr),*) => {{
+        i18n_embed_fl::fl!($crate::LANGUAGE_LOADER, $message_id, $( $args )*)
+    }};
+}
+
+// ------------------------------------------------------------------------------------------------
 // Main
 // ------------------------------------------------------------------------------------------------
 
 fn main() {
+    // Reminder: this only does it's magic in release builds.
+    setup_panic!();
+
     let command_args = parse_command_line();
 
-    let base_env = make_preset_environment(match command_args.base_environment {
+    let mut env = make_preset_environment(match command_args.base_environment {
         BaseEnvironment::Interaction => PresetEnvironmentKind::Interaction,
         BaseEnvironment::R5Rs => PresetEnvironmentKind::Report(DEFAULT_SCHEME_ENVIRONMENT_VERSION),
         BaseEnvironment::SchemeBase => PresetEnvironmentKind::SchemeBase,
         BaseEnvironment::Null => PresetEnvironmentKind::Null(DEFAULT_SCHEME_ENVIRONMENT_VERSION),
     })
     .unwrap();
-    let mut env = Environment::new_child_named(base_env, REPL_ENVIRONMENT_ID);
 
     if let Some(datum_str) = command_args.expression {
         eval_datum_str(&datum_str, &mut env, false);
     } else if atty::is(atty::Stream::Stdin) {
         println!(
-            "Welcome to {}, v{}.",
-            IMPLEMENTATION_NAME, IMPLEMENTATION_VERSION
+            "{}",
+            fl!(
+                "welcome",
+                impl_name = IMPLEMENTATION_NAME,
+                impl_version = IMPLEMENTATION_VERSION
+            )
         );
+
+        let mut env = Environment::new_child_named(base_env, REPL_ENVIRONMENT_ID);
 
         let history_file = command_args.history_file;
 
@@ -94,7 +123,7 @@ fn main() {
         rl.bind_sequence(KeyEvent::alt('p'), Cmd::HistorySearchBackward);
 
         if rl.load_history(&history_file).is_err() {
-            println!("No previous history.");
+            println!("{}", fl!("no_history"));
         }
 
         let _ = env.borrow_mut().insert(
@@ -121,7 +150,8 @@ fn main() {
                         Identifier::from_str_unchecked(REPL_INIT_FILE),
                         Expression::String(SchemeString::from(p.to_string_lossy().to_string())),
                     );
-                    let init_file_content = fs::read_to_string(p).expect("Error reading init file");
+                    let init_file_content = fs::read_to_string(&p)
+                        .expect(&fl!("err_read_init", path = format!("{:?}", p)));
                     eval_datum_str(&init_file_content, &mut env, true);
                 }
             }
@@ -131,7 +161,7 @@ fn main() {
             let prompt = make_prompt(command_args.color_off, &env);
 
             rl.helper_mut()
-                .expect("No command-line helper")
+                .expect(&fl!("err_no_cmdline_helper"))
                 .colored_prompt = prompt.to_string();
             let result = rl.readline(&prompt.to_string());
 
@@ -143,15 +173,15 @@ fn main() {
                     }
                 }
                 Err(ReadlineError::Interrupted) => {
-                    println!("Interrupted");
+                    println!("{}", fl!("interrupted"));
                     break;
                 }
                 Err(ReadlineError::Eof) => {
-                    println!("Goodbye");
+                    println!("{}", fl!("goodbye"));
                     break;
                 }
                 Err(err) => {
-                    println!("Error: {:?}", err);
+                    println!("{}", fl!("error", err = err.to_string()));
                     break;
                 }
             }
@@ -163,7 +193,7 @@ fn main() {
 
         input
             .read_to_string(&mut buffer)
-            .expect("Could not read stdin");
+            .expect(&fl!("err_read_stdin"));
         eval_datum_str(&buffer, &mut env, true);
     }
 }
@@ -345,16 +375,25 @@ struct CommandLine {
 fn parse_command_line() -> CommandLine {
     let args = CommandLine::from_args();
 
-    pretty_env_logger::formatted_builder()
-        .filter_level(match args.verbose {
-            0 => log::LevelFilter::Off,
-            1 => log::LevelFilter::Error,
-            2 => log::LevelFilter::Warn,
-            3 => log::LevelFilter::Info,
-            4 => log::LevelFilter::Debug,
-            _ => log::LevelFilter::Trace,
-        })
+    // Override max level from command line
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            EnvFilter::from_default_env().add_directive(
+                match args.verbose {
+                    0 => LevelFilter::OFF,
+                    1 => LevelFilter::ERROR,
+                    2 => LevelFilter::WARN,
+                    3 => LevelFilter::INFO,
+                    4 => LevelFilter::DEBUG,
+                    _ => LevelFilter::TRACE,
+                }
+                .into(),
+            ),
+        )
         .init();
+
+    // TODO: Initialize log compatibility
+    // println!("{:?}", LogTracer::init());
 
     args
 }
@@ -386,6 +425,26 @@ impl FromStr for BaseEnvironment {
             _ => Err(Error::from(ErrorKind::BadArguments)),
         }
     }
+}
+
+// ------------------------------------------------------------------------------------------------
+// Language Translation
+// ------------------------------------------------------------------------------------------------
+
+#[derive(RustEmbed)]
+#[folder = "i18n/"]
+struct Localizations;
+
+lazy_static! {
+    static ref LANGUAGE_LOADER: FluentLanguageLoader = init_translations();
+}
+
+fn init_translations() -> FluentLanguageLoader {
+    let loader: FluentLanguageLoader = fluent_language_loader!();
+    loader
+        .load_languages(&Localizations, &[loader.fallback_language()])
+        .unwrap();
+    loader
 }
 
 // ------------------------------------------------------------------------------------------------

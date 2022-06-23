@@ -10,14 +10,14 @@ More detailed description, with
 use crate::error::{Error, ErrorKind};
 use crate::eval::callable::Callable;
 use crate::eval::expression::Expression;
-use crate::eval::procedures::Procedure;
 use crate::read::syntax_str::{
     PSEUDO_SYNTAX_LEFT_PROCEDURE, PSEUDO_SYNTAX_RIGHT_PROCEDURE, SYNTAX_HYPHEN, SYNTAX_SPACE_CHAR,
 };
 use crate::types::new_type::NewType;
 use crate::types::{Identifier, MutableRef, Ref, SchemeRepr, SchemeValue};
 use std::cell::RefCell;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
+use std::io::Write;
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
@@ -26,7 +26,7 @@ use std::collections::{BTreeMap, BTreeSet};
 #[derive(Clone, Debug, PartialEq)]
 pub struct Environment {
     name: Option<String>,
-    values: ExportList,
+    bindings: ExportList,
     parent: Option<MutableRef<Environment>>,
     immutable: bool,
 }
@@ -46,6 +46,54 @@ pub const TOP_ENVIRONMENT_NAME: &str = "*top*";
 // ------------------------------------------------------------------------------------------------
 // Public Functions
 // ------------------------------------------------------------------------------------------------
+
+pub fn print(env: &Environment) {
+    print_to(env, &mut std::io::stdout())
+}
+
+pub fn print_to<W: Write>(env: &Environment, w: &mut W) {
+    print_inner(env, w, &String::new())
+}
+
+fn print_inner<W: Write>(env: &Environment, w: &mut W, prefix: &str) {
+    if env.local_len() == 0 {
+        let _ = writeln!(
+            w,
+            "{}╾╴ {}",
+            prefix,
+            match env.name() {
+                None => "?",
+                Some(v) => v.as_str(),
+            }
+        );
+    } else {
+        let _ = writeln!(
+            w,
+            "{}┌╴ {}",
+            prefix,
+            match env.name() {
+                None => "?",
+                Some(v) => v.as_str(),
+            }
+        );
+        let bindings = env.bindings();
+        let last = env.local_len() - if env.parent.is_some() { 0 } else { 1 };
+        for (i, (k, v)) in bindings.enumerate() {
+            let _ = writeln!(
+                w,
+                "{}{} ('{} . {})",
+                prefix,
+                if i < last { "│ " } else { "└╴" },
+                k.to_repr_string(),
+                v.to_repr_string()
+            );
+        }
+    }
+    if let Some(parent) = env.parent() {
+        print_inner(&parent.borrow(), w, &format!("{}│  ", prefix));
+        let _ = writeln!(w, "{}└╴ ", prefix);
+    }
+}
 
 // ------------------------------------------------------------------------------------------------
 // Implementations
@@ -70,18 +118,8 @@ impl Environment {
     pub fn top() -> MutableRef<Self> {
         Self {
             name: Some(TOP_ENVIRONMENT_NAME.to_string()),
-            values: Default::default(),
+            bindings: Default::default(),
             parent: None,
-            immutable: false,
-        }
-        .into_ref()
-    }
-
-    pub fn new_child(parent: MutableRef<Self>) -> MutableRef<Self> {
-        Self {
-            name: None,
-            values: Default::default(),
-            parent: Some(parent),
             immutable: false,
         }
         .into_ref()
@@ -93,7 +131,7 @@ impl Environment {
                 "{}",
                 name.replace(SYNTAX_SPACE_CHAR, SYNTAX_HYPHEN)
             )),
-            values: Default::default(),
+            bindings: Default::default(),
             parent: Some(parent),
             immutable: false,
         }
@@ -120,7 +158,7 @@ impl Environment {
         if self.is_immutable() {
             Err(Error::from(ErrorKind::ImmutableEnvironment))
         } else {
-            Ok(self.values.insert(name, value.into()))
+            Ok(self.bindings.insert(name, value.into()))
         }
     }
 
@@ -132,14 +170,14 @@ impl Environment {
         if self.is_immutable() {
             Err(Error::from(ErrorKind::ImmutableEnvironment))
         } else {
-            if let Some(old_value) = self.values.get(&name) {
+            if let Some(old_value) = self.bindings.get(&name) {
                 if old_value.is_form() || old_value.is_builtin_procedure() {
                     Err(Error::from(ErrorKind::ImmutableValue {
                         name,
                         type_name: old_value.type_name().to_string(),
                     }))
                 } else {
-                    Ok(self.values.insert(name, value))
+                    Ok(self.bindings.insert(name, value))
                 }
             } else if let Some(parent) = &mut self.parent {
                 parent.borrow_mut().update(name, value)
@@ -149,30 +187,20 @@ impl Environment {
         }
     }
 
-    pub fn insert_procedure(&mut self, value: Procedure) -> Result<Option<Expression>, Error> {
-        if self.is_immutable() {
-            Err(Error::from(ErrorKind::ImmutableEnvironment))
-        } else {
-            Ok(self
-                .values
-                .insert(value.id().clone(), Expression::Procedure(value.into())))
-        }
-    }
-
     pub fn import(&mut self, other: Exports) -> Result<(), Error> {
         if self.is_immutable() {
             Err(Error::from(ErrorKind::ImmutableEnvironment))
         } else {
             for (id, expr) in other.iter() {
                 // TODO: need to drain?
-                self.values.insert(id.clone(), expr.clone());
+                self.bindings.insert(id.clone(), expr.clone());
             }
             Ok(())
         }
     }
 
     pub fn get(&self, name: &Identifier) -> Option<Expression> {
-        match (self.values.get(name), &self.parent) {
+        match (self.bindings.get(name), &self.parent) {
             (None, Some(parent)) => parent.borrow().get(name),
             (Some(value), _) => Some(value.clone()),
             _ => None,
@@ -180,50 +208,10 @@ impl Environment {
     }
 
     pub fn is_bound(&self, name: &Identifier) -> bool {
-        match (self.values.contains_key(name), &self.parent) {
+        match (self.bindings.contains_key(name), &self.parent) {
             (false, Some(parent)) => parent.borrow().is_bound(name),
             (true, _) => true,
             _ => false,
-        }
-    }
-
-    pub fn print(&self) {
-        self.print_inner("")
-    }
-
-    fn print_inner(&self, prefix: &str) {
-        if self.values.is_empty() {
-            println!(
-                "{}╾╴ {}",
-                prefix,
-                match &self.name {
-                    None => "?",
-                    Some(v) => v.as_str(),
-                }
-            );
-        } else {
-            println!(
-                "{}┌╴ {}",
-                prefix,
-                match &self.name {
-                    None => "?",
-                    Some(v) => v.as_str(),
-                }
-            );
-            let last = self.values.len() - if self.parent.is_some() { 0 } else { 1 };
-            for (i, (k, v)) in self.values.iter().enumerate() {
-                println!(
-                    "{}{} ('{} . {})",
-                    prefix,
-                    if i < last { "│ " } else { "└╴" },
-                    k.to_repr_string(),
-                    v.to_repr_string()
-                );
-            }
-        }
-        if let Some(parent) = &self.parent {
-            parent.borrow().print_inner(&format!("{}│  ", prefix));
-            println!("{}└╴ ", prefix);
         }
     }
 
@@ -243,41 +231,16 @@ impl Environment {
         self.immutable = true;
     }
 
-    #[cfg(feature = "todo")]
-    pub fn bindings(&self) -> BTreeMap<&Identifier, &Expression> {
-        println!(
-            "bindings {:?}, {:?}",
-            self.name,
-            self.parent.as_ref().map(|p| p.borrow().name.clone())
-        );
-        if let Some(parent) = &self.parent {
-            let parent = parent.borrow();
-            let mut parent_bindings = parent.bindings().clone();
-            parent_bindings.extend(self.bindings());
-            parent_bindings
-        } else {
-            self.local_bindings()
-        }
+    pub fn bindings(&self) -> impl Iterator<Item = (&Identifier, &Expression)> {
+        self.bindings.iter()
     }
 
-    pub fn local_bindings(&self) -> BTreeMap<&Identifier, &Expression> {
-        self.values.iter().collect()
+    pub fn binding_names(&self) -> impl Iterator<Item = &Identifier> {
+        self.bindings.keys()
     }
 
-    #[cfg(feature = "todo")]
-    pub fn binding_names(&self) -> BTreeSet<&Identifier> {
-        if let Some(parent) = &self.parent {
-            let parent = parent.borrow();
-            let mut parent_bindings = parent.binding_names().clone();
-            parent_bindings.extend(self.local_binding_names());
-            parent_bindings
-        } else {
-            self.local_binding_names()
-        }
-    }
-
-    pub fn local_binding_names(&self) -> BTreeSet<&Identifier> {
-        self.values.keys().collect()
+    pub fn local_len(&self) -> usize {
+        self.bindings.len()
     }
 
     pub fn completions(&self, prefix: &str) -> Vec<(String, String)> {
@@ -292,7 +255,7 @@ impl Environment {
     }
 
     pub fn local_completions(&self, prefix: &str) -> Vec<(String, String)> {
-        self.values
+        self.bindings
             .iter()
             .filter_map(|(id, expr)| {
                 if id.starts_with(prefix) {

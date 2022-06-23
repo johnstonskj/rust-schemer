@@ -41,6 +41,8 @@ pub const IMPLEMENTATION_VERSION: &str = env!("CARGO_PKG_VERSION");
 // Modules
 // ------------------------------------------------------------------------------------------------
 
+pub mod bootstrap;
+
 pub mod error;
 
 pub mod read;
