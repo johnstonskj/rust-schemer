@@ -16,8 +16,8 @@ publish = true
 [dependencies]
 num = "0.4"
 paste = "1.0"
-pest = "2.1"
-pest_derive = "2.1"
+pest = "2.3"
+pest_derive = "2.3"
 rust_decimal = "1.15"
 schemer-lang = { version = "0.1", path = "../schemer-lang" }
 pest_ascii_tree = "0.1"

@@ -19,9 +19,9 @@ human-panic = "1.0"
 i18n-embed = { version = "0.13", features = ["fluent-system", "desktop-requester"]}
 i18n-embed-fl = "0.6"
 lazy_static = "1.4"
-rust-embed = "6.2"
-rustyline = "9.0"
-rustyline-derive = "0.6"
+rust-embed = "6.4"
+rustyline = "10.0"
+rustyline-derive = "0.7"
 search_path = "0.1"
 schemer-parse = { version = "0.1", path = "../schemer-parse" }
 schemer-lang = { version = "0.1", path = "../schemer-lang" }

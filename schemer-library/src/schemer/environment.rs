@@ -13,9 +13,8 @@ use schemer_lang::error::{Error, ErrorKind};
 use schemer_lang::eval::environment::{Exports, TYPE_NAME_ENVIRONMENT};
 use schemer_lang::eval::{Environment, Expression, Procedure};
 use schemer_lang::read::datum::Datum;
-use schemer_lang::types::lists::vec_to_list;
 use schemer_lang::types::symbols::TYPE_NAME_SYMBOL;
-use schemer_lang::types::{Boolean, Identifier, MutableRef, Pair, Ref, SchemeString, SchemeValue};
+use schemer_lang::types::{Boolean, Identifier, MutableRef, Pair, SchemeString, SchemeValue};
 
 // ------------------------------------------------------------------------------------------------
 // Public Types
@@ -151,7 +150,7 @@ fn bound_names(
         Expression::Environment(env) => Ok(Expression::List(
             env.borrow()
                 .binding_names()
-                .map(|name| Datum::Symbol(name.clone()).into())
+                .map(|name| Datum::Symbol(name.clone()))
                 .collect(),
         )),
         e => {
@@ -171,7 +170,7 @@ fn bindings(
                 .map(|(k, v)| {
                     Datum::List(Pair::cons(
                         Datum::Symbol(k.clone()).into(),
-                        Datum::f(SchemeString::from(v)).into(),
+                        Datum::String(SchemeString::from(v)).into(),
                     ))
                 })
                 .collect(),
