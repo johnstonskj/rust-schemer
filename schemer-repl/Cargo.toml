@@ -27,6 +27,6 @@ schemer-lang = { version = "0.1", path = "../schemer-lang" }
 schemer-library = { version = "0.1", path = "../schemer-library" }
 structopt = "0.3"
 tracing = "0.1"
-tracing-log = "0.1"
+tracing-log = "0.2"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 xdirs = "0.1"
