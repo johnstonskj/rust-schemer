@@ -24,4 +24,4 @@ pest_ascii_tree = "0.1"
 tracing = "0.1"
 
 [dev-dependencies]
-pretty_assertions = "0.7"
+pretty_assertions = "1.4"
