@@ -14,7 +14,7 @@ publish = true
 
 [dependencies]
 atty = "0.2"
-colored = "2.0"
+colored = "3.1"
 human-panic = "2.0"
 i18n-embed = { version = "0.15", features = ["fluent-system", "desktop-requester"]}
 i18n-embed-fl = "0.9"
