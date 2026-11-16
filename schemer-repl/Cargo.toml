@@ -14,13 +14,13 @@ publish = true
 
 [dependencies]
 atty = "0.2"
-colored = "2.0"
+colored = "3.1"
 human-panic = "2.0"
-i18n-embed = { version = "0.15", features = ["fluent-system", "desktop-requester"]}
-i18n-embed-fl = "0.9"
+i18n-embed = { version = "0.16", features = ["fluent-system", "desktop-requester"]}
+i18n-embed-fl = "0.10"
 lazy_static = "1.4"
 rustyline = "18.0"
-rustyline-derive = "0.8"
+rustyline-derive = "0.12"
 search_path = "0.1"
 schemer-parse = { version = "0.1", path = "../schemer-parse" }
 schemer-lang = { version = "0.1", path = "../schemer-lang" }
