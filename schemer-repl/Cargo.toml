@@ -20,7 +20,7 @@ i18n-embed = { version = "0.16", features = ["fluent-system", "desktop-requester
 i18n-embed-fl = "0.10"
 lazy_static = "1.4"
 rustyline = "18.0"
-rustyline-derive = "0.12"
+rustyline-derive = "0.13"
 search_path = "0.1"
 schemer-parse = { version = "0.1", path = "../schemer-parse" }
 schemer-lang = { version = "0.1", path = "../schemer-lang" }
